@@ -1,0 +1,20 @@
+{
+  "name": "monte-carlo-balancing",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Presenter-driven demo: Monte Carlo simulation as a game-balancing tool.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "calibrate": "vitest run tests/calibrate.test.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^6.0.7",
+    "vitest": "^3.2.7"
+  }
+}
