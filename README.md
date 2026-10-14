@@ -4,7 +4,7 @@ A presenter-driven browser demo that explains **Monte Carlo simulation as a game
 
 > Probability tells you what *should* happen. When interactions are too complex to calculate, Monte Carlo simulation tells you what *does* happen — by playing the game thousands of times. Small effects need 10,000+ runs to see. And a simulation only knows what its simulated players know: it complements playtesting, it doesn't replace it.
 
-**Live demo:** https://YOUR-USER.github.io/monte-carlo-balancing/ *(placeholder — replace after the first deploy)*
+**Live demo:** https://heyitsherman.github.io/monte-carlo-balancing/
 
 ---
 
