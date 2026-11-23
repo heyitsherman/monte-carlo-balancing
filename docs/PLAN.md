@@ -1,0 +1,138 @@
+# Plan: from a 5-minute talk to a modular teaching kit
+
+*Agreed 23 Nov 2026. Execution starts only on an explicit go, phase by phase, in order.*
+
+## Goal
+
+Turn "Run it 10,000 times" from a fixed 5-minute talk into a modular kit for teaching Monte Carlo simulation as an add-on to game design fundamentals:
+
+- **Presenter first.** Herman drives it on a projector, picking whichever chapters suit the session, from a 5-minute slot to a full class segment. Modularity is built in but not signposted.
+- **Students second.** They use the same tool hands-on, with no code, at whatever depth they can manage.
+- **Balanced means on target, not fair.** Fairness is one possible target among others. Sometimes a design should be unfair, and the tool should say why.
+
+## Decisions
+
+| # | Decision | Reason |
+|---|---|---|
+| D1 | Chapters are self-contained; sessions are playlists of chapters | The same tool serves 5-minute slots and longer segments |
+| D2 | Presenter-led, with a no-code student Lab | Mostly projected, with some hands-on |
+| D3 | No student-facing code (JS or Python), and no spreadsheet in student materials | This is a game design add-on, not a coding course. Students can't be assumed to know a language. |
+| D4 | Student work is tiered by depth of design thinking (Explore, Tune, Design), not by tool | Mixed classes |
+| D5 | Verdicts use target bands ("On target / Too easy / Too hard", "Favors P1/P2") instead of a significance test against 50% | Separates "detectable" from "matters", and lets targets sit away from 50% |
+| D6 | Intentional unfairness gets its own chapter: a boss fight (target **70% first-try wins**) and a handicap as a choice | Students shouldn't leave thinking fairness is the only goal |
+| D7 | House style (heyitsherman-web-game), plus a single-file build output | Herman's design system; one offline file satisfies its binding rule |
+| D8 | One animation rule in every mode: explicit runs play the paced build-up, tweaks update instantly, and replays are labelled honestly | Behaviour that differs by mode would mislead students |
+| D9 | Audio on by default, synthesised, with mute on M and in the footer, remembered per device | Herman's request. A room full of laptops can be muted once. |
+| D10 | Build in phase order | Herman's preference. Phases 0 and 3 already improve the existing talk. |
+| D11 | Phase 4 targets: push your luck has a clear dominant strategy; loot drops target the average; best-of-N uses a 55% edge and a ≥ 75% series win | Clarity makes the lesson understandable and sticky (details in Phase 4) |
+| D12 | Remove auto-resume; the header uses neutral ink, with Cobalt as an accent; the worksheet is an editable doc | Agreed 23 Nov 2026 |
+
+## Design-system exceptions (to list in the README)
+
+1. **Simulating problems with exact answers.** The design-tool rule says to compute exactly where possible. Here, agreement between simulation and the math *is* the lesson.
+2. **Animated build-ups and counters on explicit runs.** The design-tool motion rule says to update in place. The build-up is the teaching device. It is feedback to a user action, it applies the same way in every mode (D8), and it is off under reduced motion.
+3. **No How-to-play guide on load in presenter mode.** It would pop up in front of a class. Esc opens help, and the Lab gets a one-line lead instead.
+4. **Process note, not a rule exception.** The source stays Vite + TypeScript. The skill's scripts prepare the design-system files, and Vite imports them instead of embedding them into a hand-written `index.html`. The single-file output still meets the one-offline-file rule.
+
+---
+
+## Phase 0: Fixes and hygiene
+
+| Item | Change | Files |
+|---|---|---|
+| 0.1 | Step 2.6: zoom the bar chart's y-axis (tweened) so the whiskers and the exact lines can be told apart on a projector. At 0–100% they merge into one smudge. | `src/ui/charts/barChart.ts`, `src/ui/chapters/diceDuel.ts` |
+| 0.2 | A key that closes the help overlay must not also act (→ currently advances the slide) | `src/ui/presenter.ts:250` |
+| 0.3 | Reproduce and fix the 4 console errors seen while jumping between deep links (#2.5 → #3.2 → #3.6 → #3.4 → #2.6) | to be found |
+| 0.4 | Stop the two timing assertions (< 300 ms) from blocking deploys on slow CI runners: move them to a benchmark script | `tests/games.test.ts:39`, `:109` |
+| 0.5 | Turn the calibration report into a script, so `npm test` only runs real assertions. `npm run calibrate` stays. | `tests/calibrate.test.ts` → `scripts/` |
+| 0.6 | README: remove the references to "the PRD" | `README.md` |
+| 0.7 | Remove auto-resuming the last chapter. Playlists and deep links cover rehearsal. *(Confirmed.)* | `src/ui/presenter.ts:129` |
+
+**Done when:** tests and the type-check pass, the browser console is clean through the deep-link sequence above, and step 2.6 is readable at 1280×720.
+
+## Phase 1: Engine groundwork
+
+| Item | Change |
+|---|---|
+| 1.1 | **Parameter descriptors** on `Game`: `params: { key, label, kind: int / toggle / choice, min, max, step, unit, help }`. Chapter controls and Lab controls are generated from them. |
+| 1.2 | **Metric descriptors** on `Game`: `metrics: { id, label, kind: proportion / mean / distribution, read(agg) }`, so charts and the Lab work for any game |
+| 1.3 | **Target bands**: `assess(proportion, target)` with `target = { center, tolerance, labels }`. **On target** if the 95% CI lies inside the band, **off target** (named direction) if it lies entirely outside, **"Not enough data, run more"** if it crosses a band edge. Default 50% ± 2 for symmetric games. Replaces `verdict()`. |
+| 1.4 | **Bot strategies as config**: a `strategy` choice plus numeric strategy parameters, so strategies can be swept like any other setting. `simulate` stays pure. |
+| 1.5 | **Playlists and overview**: `?set=duel,race,…` by chapter id. An overview screen (O key) lists chapters with step counts and rough minutes. Hash links use ids (`#race.4`), which stay stable across playlists. The footer numbers chapters within the playlist. |
+| 1.6 | **Run/tweak animation rule** (D8) in one shared helper. Build-ups show "Replaying the first 10 … 100 … 1,000 games". The Show/Fast setting stays visible. |
+| 1.7 | **Audio** (`src/ui/audio.ts`, WebAudio, no files): dice roll, run start, batch tick (at most about 6 per build-up), verdict landing, target-hit chime. Unlocks on the first gesture. M key and footer button. Mute stored per device (try/catch). |
+
+**Done when:** tests cover the descriptors against `defaultConfig`, the target-band cases (inside, outside, straddling) and playlist parsing; the existing talk behaves as before apart from the intended changes; sound works after the first keypress and the mute setting survives a reload.
+
+## Phase 2: House style and single-file build
+
+- Load `heyitsherman-web` (parent) and `heyitsherman-web-game`. Prepare the design-system files with the skill's script and record the parent version in the README.
+- **Fonts:** Jost, Atkinson Hyperlegible Next, Zilla Slab, Fira Sans Condensed, each in its role (Fira for data tables).
+- **Colours:**
+  - P1 **Cobalt**, P2 **Mustard** (colourblind-safe pairing); "on target" **Teal**.
+  - Orange appears only in the mark and favicon. Red appears only for danger. There is no green.
+  - The header band uses neutral ink, with Cobalt only as an accent, so it doesn't read as "P1" (D12).
+- **Shapes:** square corners everywhere except dice and tokens.
+- **Layout:** stage mode at 1180 px and wider, with type scaling to the window and state values at least 56 px at 1280×720. Register changing text in `RESERVED`; `?layout-check` must report no layout shifts.
+- **Single file:** `vite-plugin-singlefile` plus an inline worker (`?worker&inline`), `npm run build:single`. CI publishes it alongside the Pages site as `offline.html`, linked from the README and the help overlay.
+
+**Done when:** checked by eye at 375, 768, 1280×720 and 1920×1080 in both themes; AA contrast holds for every colour pair; `offline.html` opens from disk with the network off and makes no requests.
+
+## Phase 3: Sharpen existing chapters
+
+| Item | Change |
+|---|---|
+| 3.1 | **Predict-first beats**: Dice Duel step 1 ("Which outcome is most likely?") and before the race verdict ("What % does P1 win?") |
+| 3.2 | **New chapter "Ten playtests prove nothing"**: 20 groups each play 10 games of the 61.8% race, shown as a grid of small results; count how many groups would have called it fair or P2-favoured. Self-contained, so it fits any playlist. |
+| 3.3 | **Race verdicts use target bands** (Phase 1.3). Add a caption beat on the coin flip: "fair across games, not within a game". |
+| 3.4 | **Catch-up "feel" metrics**: lead changes per game, comeback rate (the winner was behind at the halfway turn), and share of games decided early. Extend `RaceOutcome`. Labelled simulation-only. |
+| 3.5 | **Closing takeaways** gain "Balanced means on target" and "Fair isn't always the goal". Each chapter's last step gets its own one-line takeaway, so any playlist ends cleanly. |
+
+**Done when:** calibrate numbers are regenerated, the README tables are updated, and the default 5-minute playlist still runs in about 5 minutes.
+
+## Phase 4: New chapters
+
+Each chapter is self-contained, has an exact answer to check against where one exists, comes with Lab presets, and has its balance target agreed with Herman before tuning.
+
+| Chapter | Design fundamental | Monte Carlo point | Exact answer | Target |
+|---|---|---|---|---|
+| **Push your luck** (an original Pig-style game: roll until you hold or bust on a 1) | Dominant strategies; decisions | A naive bot says "balanced", a smarter bot breaks it; sweeping the hold threshold finds the best play | Expected score per turn for hold-at-N | **Agreed:** holding at about 20 is the strongest simple strategy, and a bot that always rolls a fixed number of times clearly loses to it. The lesson is that a dominant strategy exists and simulation finds it. |
+| **Loot drops and pity timers** | How randomness feels; the worst-case player | Spread and rare cases: median versus 90th/99th percentile attempts; a pity timer as the balancing fix | Geometric distribution, plus the closed form with pity | **Agreed:** keep the average, remove the droughts. A plain 5% drop averages 20 tries, but 1 player in 100 needs 90 or more. Adding pity at 40 cuts the average to 17.4, so the base chance must come down too. A 4% drop with pity at 40 averages 20.1 tries and nobody waits past 40. Students tune the base chance and pity together. |
+| **Best-of-N** | Skill versus luck; match format | How many games until the better player reliably wins; a short series as deliberate upset potential | Binomial | **Agreed:** a 55% per-game edge; find the shortest series where the better player wins at least 75%. Exact answer: **best-of-45** (75.06%; best-of-7 gives only 60.8%). The size of that number is the lesson: small edges drown in luck, which is why leagues play long seasons and a short series is a choice for drama. |
+| **Fair isn't the goal** | Intentional unfairness | Tuning toward a target that isn't 50% | Boss fight: dynamic programming over HP states | **Boss: 70% first-try wins (agreed).** Handicap: "P2 is the newer player, aim for 58%": a 3-square head start gives P2 58.67% exactly, so the head start that was "too far" for fairness is right on target for the handicap. |
+
+Snowball rules, house edge and roguelike win rates are discussion prompts in that chapter, not simulations.
+
+**Done when:** each game has exact-versus-simulation tests; each target is met and reported with real numbers; each preset moves the numbers the way its blurb claims.
+
+## Phase 5: Lab
+
+- **Route:** `?lab`. Two panes: inputs on the left, results on the right; stacked on phones. A seed field is visible.
+- **Game picker** with controls generated from the parameter descriptors.
+- **Presets as lessons**, each with a one-line blurb naming what it teaches.
+- **A/B comparison** of two rule sets side by side, with the difference and its CI.
+- **Sweeps**: 1D for any numeric setting, 2D as a heatmap (via the existing `sweep()`).
+- **Run-count calculator**: "To detect a 2 pp edge you need about N runs."
+- **CSV export** of the current results or sweep.
+- **"Open in Lab"** from every chapter, carrying its current rules. Lab state is encoded in the URL, so students can share findings.
+- The same animation rule (D8) and the same audio as presenter mode.
+
+**Done when:** every game works in the Lab with no game-specific UI code; a URL round-trips the Lab state; it is usable at 375 px.
+
+## Phase 6: Teaching kit (`docs/teaching/`)
+
+- **Facilitator guide**: a menu of segments with timings and playlist URLs, talking points, likely misconceptions, and discussion prompts (including when unfairness is the goal).
+- **Tiered worksheet**: Explore (predict, run, explain), Tune (hit a target band), Design (choose and defend a target, then find rules that hit it). An **editable doc**, so the questions can be adapted per class (D12).
+- **Exercises with an answer key**, with numbers quoted from a fresh calibrate run.
+- **Unplugged dice activity**: pool the class's rolls on the board, then compare with the simulation.
+- *Optional, cut first:* a short spreadsheet appendix for the instructor only.
+
+---
+
+## Still open
+
+Nothing blocking. All open questions were resolved on 23 Nov 2026 (D11, D12). Exact numbers in Phase 4 are to be reconfirmed by the chapter tests when each game is built.
+
+## Checks for every phase
+
+`npm test`, `npm run build` (type-check plus build), a browser check of the affected screens at projector and phone size in both themes, a clean console, and README numbers regenerated with `npm run calibrate` whenever simulation output changes.
