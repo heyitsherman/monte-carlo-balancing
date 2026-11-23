@@ -64,6 +64,12 @@ Turn "Run it 10,000 times" from a fixed 5-minute talk into a modular kit for tea
 
 **Done when:** tests cover the descriptors against `defaultConfig`, the target-band cases (inside, outside, straddling) and playlist parsing; the existing talk behaves as before apart from the intended changes; sound works after the first keypress and the mute setting survives a reload.
 
+**Notes from execution:**
+- The talk still shows the v1 verdict, now implemented as `assess()` with a zero-width band. Switching to `FAIR_TARGET` is Phase 3 (see "Still open").
+- The replay label sits right-aligned in the footnote row. Top-centre collided with the race's rules chip.
+- Fixed a pre-existing tween bug: animation-frame timestamps can precede the tween's start, so every tween briefly overshot backwards (visible as a negative bar width at 0%).
+- The race's first-roll bonus is now a 0–3 setting (the talk still uses 0 or 1); exact vs simulation is tested at 3.
+
 ## Phase 2: House style and single-file build
 
 - Load `heyitsherman-web` (parent) and `heyitsherman-web-game`. Prepare the design-system files with the skill's script and record the parent version in the README.
@@ -75,6 +81,8 @@ Turn "Run it 10,000 times" from a fixed 5-minute talk into a modular kit for tea
 - **Shapes:** square corners everywhere except dice and tokens.
 - **Layout:** stage mode at 1180 px and wider, with type scaling to the window and state values at least 56 px at 1280×720. Register changing text in `RESERVED`; `?layout-check` must report no layout shifts.
 - **Single file:** `vite-plugin-singlefile` plus an inline worker (`?worker&inline`), `npm run build:single`. CI publishes it alongside the Pages site as `offline.html`, linked from the README and the help overlay.
+
+- **Known phone issue (from v1):** at 375 px the race's slider card overflows its column (its unit label is clipped). Fix it with the phone layout.
 
 **Done when:** checked by eye at 375, 768, 1280×720 and 1920×1080 in both themes; AA contrast holds for every colour pair; `offline.html` opens from disk with the network off and makes no requests.
 
@@ -131,7 +139,14 @@ Snowball rules, house edge and roguelike win rates are discussion prompts in tha
 
 ## Still open
 
-Nothing blocking. All open questions were resolved on 23 Nov 2026 (D11, D12). Exact numbers in Phase 4 are to be reconfirmed by the chapter tests when each game is built.
+1. **Before Phase 3: the race storyline under target bands.** With `FAIR_TARGET` (50% ± 2), head start 2 (exact 48.38%) is fair, but only 0.38 points inside the band. With the default seed it reads "Not enough data: run more" at 10,000 runs (CI 47.10–49.06%), at 100,000 (47.91–48.53%) and even at 200,000 (47.98–48.42%). Steps 3.3 ("push it until the verdict flips") and 3.4 ("no whole number is fair, so change the rule") no longer hold as written. Options:
+   - (a) **± 2, and make the ambiguity the lesson:** "near the edge of your tolerance, even 200,000 runs can't tell you". Honest, but murky on stage.
+   - (b) **± 3:** head start 2 reads "Fair" at 10,000 runs (CI inside 47–53%), and the storyline becomes "head start 2 is fair enough; fixes #2 and #3 are alternatives that feel different". Caveat: after a reseed (`S`) it reads "Not enough data" roughly 1 time in 5, which is honest but needs a line in the facilitator guide.
+   - (c) **Keep the v1 significance verdict for this chapter only.** The script is unchanged, but it keeps the "detectable vs matters" confusion that D5 set out to fix.
+
+   To decide with Herman before Phase 3 starts.
+
+Exact numbers in Phase 4 are to be reconfirmed by the chapter tests when each game is built.
 
 ## Checks for every phase
 

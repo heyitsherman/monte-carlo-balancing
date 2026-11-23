@@ -16,10 +16,13 @@ import { renderConvergence, type ConvergenceData } from '../charts/convergenceCh
 import { dieSvg } from '../charts/dice';
 import { ChartHost } from '../charts/host';
 import type { AppContext, Chapter, EnterInfo } from '../types';
+import { sound } from '../audio';
+import { playBuildUp } from '../buildUp';
 import { el, fx, sleep } from '../util';
 
 const CONFIG = diceDuel.defaultConfig;
 const TRACE_N = 100_000;
+const NOUN = { one: 'battle', many: 'battles' };
 /** n shown at steps 1..5 (index = step) */
 const STEP_N = [0, 10, 100, 1000, 10_000, 10_000];
 
@@ -35,8 +38,9 @@ const COLORS: Record<DuelOutcome, string> = {
 };
 
 export class DiceDuelChapter implements Chapter {
-  id = 'dice-duel';
+  id = 'duel';
   title = 'Dice Duel';
+  minutes = 1.5;
   showsStats = true;
   steps = [
     { caption: 'Attacker rolls 3 dice, defender rolls 2. Who wins?', sub: 'Sort both. Highest vs highest, second vs second. Ties go to the defender.' },
@@ -126,7 +130,7 @@ export class DiceDuelChapter implements Chapter {
       if (step === 0) {
         this.show(this.battleView);
         if (info.direction === 'rerun') this.battleCount++;
-        await this.renderBattle(info.animate);
+        await this.renderBattle(info.animate, info.animate || info.direction === 'rerun');
       } else if (step <= 5) {
         this.show(this.barsView);
         await this.renderBars(step, prev, info);
@@ -142,9 +146,11 @@ export class DiceDuelChapter implements Chapter {
 
   // ---- step 0: one battle -------------------------------------------------
 
-  private async renderBattle(animate: boolean): Promise<void> {
+  /** `audible`: the presenter asked for this roll (entered the step in Show mode, or pressed R). */
+  private async renderBattle(animate: boolean, audible: boolean): Promise<void> {
     const epoch = this.ctx.epoch;
     const b = rollBattle(CONFIG, createRng(`${this.ctx.seed}|battle|${this.battleCount}`));
+    if (audible) sound.dice();
     if (animate) {
       const fake = (): Battle => ({
         attacker: [0, 0, 0].map(() => 1 + Math.floor(Math.random() * 6)),
@@ -159,6 +165,7 @@ export class DiceDuelChapter implements Chapter {
       }
     }
     this.battleView.innerHTML = this.battleHtml(b, true, false);
+    if (audible) sound.verdict();
   }
 
   private battleHtml(b: Battle, reveal: boolean, rolling: boolean): string {
@@ -237,19 +244,21 @@ export class DiceDuelChapter implements Chapter {
 
     if (info.animate && info.direction === 'rerun' && !showExact) {
       // Replay the whole cumulative sequence 1 → 10 → ... → target.
-      for (const n of showBatches(target)) {
-        await setN(n, 600, 0);
-        if (!(await ctx.wait(700, epoch))) return;
+      const frames = showBatches(target).map((n) => ({ n, data: n }));
+      if (await playBuildUp(ctx, epoch, frames, (n, ms) => setN(n, ms, 0), { noun: NOUN, tweenMs: 600, holdMs: 700 })) {
+        sound.verdict();
       }
     } else if (info.animate && showExact) {
       // Exact lines fade in on the familiar 0–100% bars, then the axis zooms in so the
       // whiskers are big enough to see whether each exact line falls inside them.
       if (prevStep === 5) await setN(target, 0, 0, 0);
       if (!(await ctx.wait(300, epoch))) return;
+      sound.verdict();
       await setN(target, 900, 1, 0);
       if (!(await ctx.wait(600, epoch))) return;
       await setN(target, 1100, 1, 1);
     } else {
+      if (info.animate) sound.tick();
       await setN(target, info.animate ? 700 : 0, showExact ? 1 : 0, showExact ? 1 : 0);
     }
   }
@@ -276,7 +285,12 @@ export class DiceDuelChapter implements Chapter {
     });
     if (animate) {
       await this.conv.set(data(0), 0);
+      sound.runStart();
+      this.ctx.setReplay(`Replaying all ${formatInt(TRACE_N)} battles in order`);
       await this.conv.set(data(Math.log10(TRACE_N)), 5000);
+      if (!this.ctx.alive(epoch)) return;
+      this.ctx.setReplay(null);
+      sound.verdict();
     } else {
       await this.conv.set(data(Math.log10(TRACE_N)), 0);
     }

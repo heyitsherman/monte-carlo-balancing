@@ -30,12 +30,83 @@ export function wilson(k: number, n: number, z = Z95): Proportion {
   return { k, n, p, lo, hi, marginPP: ((hi - lo) / 2) * 100 };
 }
 
+/**
+ * A design target for a proportion: "aim for `center`, anything within ± `tolerance` is fine".
+ * Balanced means on target, and the target is a design decision, not always 50%.
+ */
+export interface Target {
+  /** e.g. 0.5 for fairness, 0.7 for a boss you should usually beat */
+  center: number;
+  /** half-width of the acceptable band, e.g. 0.02 for ± 2 pp */
+  tolerance: number;
+  labels: {
+    /** whole CI below the band, e.g. "Favors P2" or "Too hard" */
+    below: string;
+    /** whole CI inside the band, e.g. "Fair" or "On target" */
+    on: string;
+    /** whole CI above the band, e.g. "Favors P1" or "Too easy" */
+    above: string;
+    /** CI crosses a band edge; defaults to "Not enough data: run more" */
+    unclear?: string;
+  };
+}
+
+export type AssessmentStatus = 'below' | 'on' | 'above' | 'unclear';
+
+export interface Assessment {
+  status: AssessmentStatus;
+  /** The target's label for `status`, ready to show. */
+  label: string;
+  /** The acceptable band. */
+  bandLo: number;
+  bandHi: number;
+}
+
+export const NOT_ENOUGH_DATA = 'Not enough data: run more';
+
+/**
+ * Compare a proportion's 95% CI with a target band.
+ * - on: the whole CI lies inside the band
+ * - below / above: the whole CI lies outside the band
+ * - unclear: the CI crosses a band edge, so more runs are needed to tell
+ */
+export function assess(prop: Proportion, target: Target): Assessment {
+  const bandLo = target.center - target.tolerance;
+  const bandHi = target.center + target.tolerance;
+  const eps = 1e-12;
+  let status: AssessmentStatus;
+  if (!Number.isFinite(prop.p)) status = 'unclear';
+  else if (prop.hi < bandLo - eps) status = 'below';
+  else if (prop.lo > bandHi + eps) status = 'above';
+  else if (prop.lo >= bandLo - eps && prop.hi <= bandHi + eps) status = 'on';
+  else status = 'unclear';
+  const label = status === 'unclear' ? (target.labels.unclear ?? NOT_ENOUGH_DATA) : target.labels[status];
+  return { status, label, bandLo, bandHi };
+}
+
+/** Fairness target used by symmetric two-player games: 50% ± 2 pp. */
+export const FAIR_TARGET: Target = {
+  center: 0.5,
+  tolerance: 0.02,
+  labels: { below: 'Favors P2', on: 'Fair', above: 'Favors P1' },
+};
+
 export type Verdict = 'Fair within margin' | 'Favors P1' | 'Favors P2';
 
-/** Fairness verdict from P1's win proportion: fair iff the 95% CI contains 50%. */
+/** Zero-width band at 50%: "unclear" (the CI contains 50%) reads as "Fair within margin". */
+const SIGNIFICANCE_TARGET: Target = {
+  center: 0.5,
+  tolerance: 0,
+  labels: { below: 'Favors P2', on: 'Fair within margin', above: 'Favors P1', unclear: 'Fair within margin' },
+};
+
+/**
+ * The v1 verdict: fair iff the 95% CI contains 50%. This is a significance test, so it
+ * answers "is a bias detectable?", not "does it matter?". Kept until the chapters move to
+ * target bands (`assess` with `FAIR_TARGET`, plan Phase 3).
+ */
 export function verdict(p1: Proportion): Verdict {
-  if (p1.lo <= 0.5 && p1.hi >= 0.5) return 'Fair within margin';
-  return p1.p > 0.5 ? 'Favors P1' : 'Favors P2';
+  return assess(p1, SIGNIFICANCE_TARGET).label as Verdict;
 }
 
 const intFmt = new Intl.NumberFormat('en-US');

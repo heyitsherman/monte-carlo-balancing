@@ -1,5 +1,5 @@
 import type { Rng } from '../core/rng';
-import { histAdd } from '../core/stats';
+import { FAIR_TARGET, histAdd } from '../core/stats';
 import type { Game } from './types';
 
 /**
@@ -12,7 +12,7 @@ export interface RaceConfig {
   dieSides: number;
   /** P2 starts this many squares ahead (0–6). */
   p2HeadStart: number;
-  /** Added to P2's first roll only (0 or 1). */
+  /** Added to P2's first roll only (the talk uses 0 or 1). */
   p2FirstRollBonus: number;
   /** At the start of a turn, a player strictly behind rolls 2 dice and keeps the higher. */
   catchUp: boolean;
@@ -184,6 +184,36 @@ export const race: Game<RaceConfig, RaceOutcome, RaceAggregate, RaceExact | null
     catchUp: false,
     maxTurns: 1000,
   },
+  params: [
+    { key: 'trackLength', label: 'Track length', kind: 'int', min: 10, max: 40, unit: 'squares', help: 'Squares from the start to the finish.' },
+    { key: 'dieSides', label: 'Die', kind: 'int', min: 4, max: 12, step: 2, unit: 'sides', help: 'Each turn a player rolls one die with this many sides.' },
+    { key: 'p2HeadStart', label: 'P2 head start', kind: 'int', min: 0, max: 6, unit: 'squares', help: 'Player 2 starts this many squares ahead.' },
+    { key: 'p2FirstRollBonus', label: 'P2 first-roll bonus', kind: 'int', min: 0, max: 3, unit: 'squares', help: "Added to Player 2's first roll only." },
+    { key: 'catchUp', label: 'Catch-up', kind: 'toggle', help: 'A player who is behind rolls two dice and keeps the higher.' },
+  ],
+  metrics: [
+    {
+      id: 'p1Win', label: 'P1 wins', kind: 'proportion', target: FAIR_TARGET,
+      read: (a) => ({ kind: 'proportion', k: a.p1Wins, n: a.n }),
+      exact: (e) => (e ? e.p1Win : null),
+    },
+    {
+      id: 'p2Win', label: 'P2 wins', kind: 'proportion',
+      target: { ...FAIR_TARGET, labels: { below: 'Favors P1', on: 'Fair', above: 'Favors P2' } },
+      read: (a) => ({ kind: 'proportion', k: a.p2Wins, n: a.n }),
+      exact: (e) => (e ? e.p2Win : null),
+    },
+    {
+      id: 'length', label: 'Average game length', kind: 'mean', unit: 'turns',
+      read: (a) => ({ kind: 'mean', sum: a.turnsSum, sumSq: a.turnsSumSq, n: a.n }),
+      exact: (e) => (e ? e.meanTurns : null),
+    },
+    {
+      id: 'lengthDist', label: 'Game length', kind: 'distribution', xLabel: 'Game length (turns, both players)',
+      read: (a) => ({ kind: 'distribution', hist: a.turnsHist }),
+      exact: (e) => (e ? e.lengthDist : null),
+    },
+  ],
   simulate: (config, rng) => playRace(config, rng),
   emptyAggregate: () => ({ n: 0, p1Wins: 0, p2Wins: 0, capHits: 0, turnsSum: 0, turnsSumSq: 0, turnsHist: [] }),
   accumulate(agg, o) {

@@ -134,10 +134,16 @@ code {
   position: relative;
 }
 
+.footnote-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 4px;
+}
 .footnote {
   font-size: 20px;
   color: var(--muted);
-  padding-bottom: 4px;
 }
 
 .footer {
@@ -151,6 +157,7 @@ code {
   color: var(--muted);
 }
 .footer-info {
+  font-size: 18px;
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
@@ -172,7 +179,8 @@ code {
 }
 .footer-nav {
   display: flex;
-  gap: 6px;
+  flex: none;
+  gap: 4px;
 }
 .footer-nav button {
   font: inherit;
@@ -188,6 +196,75 @@ code {
 .footer-nav button:hover {
   border-color: var(--axis);
 }
+.footer-nav .sound-btn.muted {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+/* "Replaying the first 100 games": shown only during a build-up; visibility toggles, so no layout shift */
+.replay {
+  flex: none;
+  padding: 2px 14px;
+  border: 1px solid var(--grid);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 20px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* overview (O): every chapter and step of the session */
+.overview-card {
+  width: min(1100px, 92vw);
+}
+.ov-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px 24px;
+  margin: 4px 0 16px;
+}
+.ov-chapter h4 {
+  margin: 0 0 6px;
+  font-size: 22px;
+}
+.ov-num {
+  display: inline-block;
+  min-width: 1.6em;
+  color: var(--p1);
+}
+.ov-min {
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--muted);
+}
+.ov-chapter ol {
+  margin: 0;
+  padding-left: 1.6em;
+}
+.ov-chapter button {
+  font: inherit;
+  font-size: 18px;
+  text-align: left;
+  color: var(--fg);
+  background: none;
+  border: 0;
+  padding: 3px 4px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.ov-chapter button:hover {
+  background: var(--bg);
+}
+.ov-chapter button[aria-current='step'] {
+  font-weight: 700;
+  color: var(--p1);
+}
+.overview-card .ov-link,
+.overview-card .ov-others {
+  margin: 0 0 8px;
+  word-break: break-all;
+}
 .progress {
   position: absolute;
   left: 0;
@@ -199,7 +276,7 @@ code {
 }
 
 /* ---------- help overlay ---------- */
-.help {
+.overlay {
   position: fixed;
   inset: 0;
   background: rgb(0 0 0 / 0.45);
@@ -213,6 +290,9 @@ code {
   border-radius: 16px;
   padding: 28px 36px;
   min-width: min(560px, 92vw);
+  max-width: 92vw;
+  max-height: 90vh;
+  overflow: auto;
   box-shadow: var(--shadow);
 }
 .help-card h3 {

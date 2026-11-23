@@ -1,22 +1,24 @@
 import { run } from './runner';
 
 /**
- * Generic N-dimensional parameter sweep over numeric config keys.
- * Chapter 2 uses it in 1D (head start 0…6). A heatmap chapter (v2) can sweep
- * e.g. trackLength × p2HeadStart and only needs a new chart + chapter file.
+ * Generic N-dimensional parameter sweep over config keys: numbers (head start 0…6),
+ * toggles, or strategy choices ('holdAt' vs 'rollTwice'). The race chapter sweeps in 1D;
+ * a heatmap (e.g. trackLength × p2HeadStart) only needs a 2D chart.
  */
 
+export type SweepValue = number | string | boolean;
+
 export interface SweepAxis {
-  /** A numeric key of the game's config. */
+  /** A key of the game's config. */
   key: string;
-  values: number[];
+  values: SweepValue[];
 }
 
 export interface SweepCell<A> {
   /** Index into each axis' `values`, in axis order. */
   index: number[];
   /** The axis values for this cell, in axis order. */
-  coords: number[];
+  coords: SweepValue[];
   config: Record<string, unknown>;
   aggregate: A;
 }

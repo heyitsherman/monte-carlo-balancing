@@ -1,7 +1,19 @@
 import { describe, expect, test } from 'vitest';
 import { logCheckpoints, runSync, showBatches, stableStringify } from '../src/core/engine';
 import { createRng } from '../src/core/rng';
-import { histAdd, meanCI, verdict, wilson, formatProportion } from '../src/core/stats';
+import { estimate } from '../src/core/metrics';
+import {
+  FAIR_TARGET,
+  NOT_ENOUGH_DATA,
+  assess,
+  formatProportion,
+  histAdd,
+  meanCI,
+  verdict,
+  wilson,
+  type Proportion,
+  type Target,
+} from '../src/core/stats';
 import { gridIndices, sweep, type RunFn } from '../src/core/sweep';
 import type { RaceAggregate } from '../src/games/race';
 import { race } from '../src/games/race';
@@ -147,5 +159,80 @@ describe('sweep', () => {
     );
     expect(res.cells).toHaveLength(6);
     expect(res.at(1, 2).config).toMatchObject({ trackLength: 20, p2HeadStart: 4 });
+  });
+
+  test('axes can be strategy choices and toggles, not just numbers', async () => {
+    const echo: RunFn = async <A>(_g: string, c: unknown) => c as A;
+    const res = await sweep<Record<string, unknown>>(
+      'race', race.defaultConfig,
+      [{ key: 'strategy', values: ['holdAt', 'rollTwice'] }, { key: 'catchUp', values: [false, true] }],
+      1, 'x', { runFn: echo },
+    );
+    expect(res.cells.map((c) => c.coords)).toEqual([
+      ['holdAt', false], ['holdAt', true], ['rollTwice', false], ['rollTwice', true],
+    ]);
+    expect(res.at(1, 1).aggregate).toMatchObject({ strategy: 'rollTwice', catchUp: true });
+  });
+});
+
+describe('target bands', () => {
+  /** A proportion with an exact CI, for readable cases. */
+  const ci = (p: number, lo: number, hi: number): Proportion => ({ k: 0, n: 1, p, lo, hi, marginPP: ((hi - lo) / 2) * 100 });
+  const boss: Target = { center: 0.7, tolerance: 0.03, labels: { below: 'Too hard', on: 'On target', above: 'Too easy' } };
+
+  test('whole CI inside the band → on target', () => {
+    expect(assess(ci(0.5, 0.49, 0.51), FAIR_TARGET)).toMatchObject({ status: 'on', label: 'Fair' });
+    const a = assess(ci(0.7, 0.68, 0.72), boss);
+    expect(a).toMatchObject({ status: 'on', label: 'On target' });
+    expect(a.bandLo).toBeCloseTo(0.67, 12);
+    expect(a.bandHi).toBeCloseTo(0.73, 12);
+  });
+
+  test('whole CI outside the band → named direction', () => {
+    expect(assess(ci(0.618, 0.608, 0.628), FAIR_TARGET)).toMatchObject({ status: 'above', label: 'Favors P1' });
+    expect(assess(ci(0.45, 0.44, 0.46), FAIR_TARGET)).toMatchObject({ status: 'below', label: 'Favors P2' });
+    expect(assess(ci(0.6, 0.59, 0.61), boss).label).toBe('Too hard');
+  });
+
+  test('CI crossing a band edge → not enough data', () => {
+    // head start 2 in the race: 48.1% ± 1.0 crosses the 48% edge of 50 ± 2
+    expect(assess(ci(0.481, 0.471, 0.491), FAIR_TARGET)).toMatchObject({ status: 'unclear', label: NOT_ENOUGH_DATA });
+    // a CI wider than the whole band can't confirm anything
+    expect(assess(ci(0.5, 0.4, 0.6), FAIR_TARGET).status).toBe('unclear');
+  });
+
+  test('custom unclear label and no data', () => {
+    const t: Target = { ...boss, labels: { ...boss.labels, unclear: 'Keep testing' } };
+    expect(assess(ci(0.67, 0.66, 0.68), t).label).toBe('Keep testing');
+    expect(assess(wilson(0, 0), FAIR_TARGET).status).toBe('unclear');
+  });
+
+  test('v1 verdict is unchanged: fair iff the CI contains 50%', () => {
+    for (const k of [4800, 4900, 4950, 5000, 5050, 5100, 5200, 6180]) {
+      const w = wilson(k, 10_000);
+      const old = w.lo <= 0.5 && w.hi >= 0.5 ? 'Fair within margin' : w.p > 0.5 ? 'Favors P1' : 'Favors P2';
+      expect(verdict(w)).toBe(old);
+    }
+  });
+});
+
+describe('metrics', () => {
+  test('estimates read proportions, means and distributions from an aggregate', () => {
+    const agg = runSync<RaceAggregate>('race', race.defaultConfig, 2000, 'dgt-balance');
+    const e = race.exact!(race.defaultConfig)!;
+    const byId = Object.fromEntries(race.metrics.map((m) => [m.id, estimate(m, agg, e)]));
+    expect(byId.p1Win).toMatchObject({ kind: 'proportion', exact: e.p1Win });
+    if (byId.p1Win.kind === 'proportion') expect(byId.p1Win.value.n).toBe(2000);
+    expect(byId.length).toMatchObject({ kind: 'mean', exact: e.meanTurns });
+    if (byId.lengthDist.kind === 'distribution') {
+      expect(byId.lengthDist.n).toBe(2000);
+      expect(byId.lengthDist.value.reduce((s, x) => s + x, 0)).toBeCloseTo(1, 10);
+    }
+  });
+
+  test('no closed form → exact is null', () => {
+    const cfg = { ...race.defaultConfig, catchUp: true };
+    const agg = runSync<RaceAggregate>('race', cfg, 500, 'x');
+    for (const m of race.metrics) expect(estimate(m, agg, race.exact!(cfg)).exact).toBeNull();
   });
 });

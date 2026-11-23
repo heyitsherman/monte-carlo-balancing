@@ -105,6 +105,18 @@ export function exactDuel(config: DuelConfig): DuelExact {
 export const diceDuel: Game<DuelConfig, DuelOutcome, DuelAggregate, DuelExact> = {
   id: 'diceDuel',
   defaultConfig: { attackerDice: 3, defenderDice: 2, sides: 6 },
+  params: [
+    { key: 'attackerDice', label: 'Attacker dice', kind: 'int', min: 1, max: 3, unit: 'dice', help: 'Dice the attacker rolls.' },
+    { key: 'defenderDice', label: 'Defender dice', kind: 'int', min: 1, max: 2, unit: 'dice', help: 'Dice the defender rolls.' },
+    { key: 'sides', label: 'Die', kind: 'int', min: 4, max: 12, step: 2, unit: 'sides', help: 'Sides on every die.' },
+  ],
+  metrics: DUEL_OUTCOMES.map((o) => ({
+    id: o,
+    label: { attackerWinsBoth: 'Attacker sweeps', split: 'Split', defenderWinsBoth: 'Defender sweeps' }[o],
+    kind: 'proportion' as const,
+    read: (a: DuelAggregate) => ({ kind: 'proportion' as const, k: a[o], n: a.n }),
+    exact: (e: DuelExact) => e[o].p,
+  })),
   simulate: (config, rng) => rollBattle(config, rng).outcome,
   emptyAggregate: () => ({ n: 0, attackerWinsBoth: 0, split: 0, defenderWinsBoth: 0 }),
   accumulate(agg, o) {

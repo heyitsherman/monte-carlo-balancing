@@ -10,7 +10,9 @@ import { ChartHost } from '../charts/host';
 import { renderSweep, type SweepChartData } from '../charts/sweepChart';
 import { renderTug, type TugData } from '../charts/tugOfWar';
 import type { AppContext, Chapter, EnterInfo } from '../types';
-import { el, fx, sleep } from '../util';
+import { sound } from '../audio';
+import { playBuildUp } from '../buildUp';
+import { el, fx } from '../util';
 
 const N = 10_000;
 const BASE: RaceConfig = race.defaultConfig;
@@ -31,8 +33,9 @@ const STEP_SETUP: { view: 'track' | 'result' | 'sweep'; control?: Control; confi
 const verdictClass = (v: Verdict) => (v === 'Favors P1' ? 'favors-p1' : v === 'Favors P2' ? 'favors-p2' : 'fair');
 
 export class RaceChapter implements Chapter {
-  id = 'first-player';
+  id = 'race';
   title = 'The First-Player Problem';
+  minutes = 2.5;
   showsStats = true;
   steps = [
     { caption: 'A simple race. Roll and move. First to the end wins.', sub: `${BASE.trackLength} squares, one d6, Player 1 always moves first.` },
@@ -168,18 +171,19 @@ export class RaceChapter implements Chapter {
     this.trackView.hidden = setup.view !== 'track';
     this.resultView.hidden = setup.view !== 'result';
     this.sweepView.hidden = setup.view !== 'sweep';
+    const audible = info.direction !== 'backward';
     const go = async () => {
       if (setup.view === 'track') {
         if (info.direction === 'rerun') this.demoCount++;
-        await this.playDemo(info.animate);
+        await this.playDemo(info.animate, audible);
       } else if (setup.view === 'sweep') {
-        await this.runSweep(info.animate);
+        await this.runSweep(info.animate, audible);
       } else {
         // Each fix is evaluated on its own: reset to the step's config on entry
         // (but keep the presenter's head-start choice when re-running step 3).
         if (!(step === 2 && info.direction === 'rerun')) this.cfg = { ...BASE, ...setup.config };
         this.syncControls(setup.control);
-        await this.runCurrent(info.animate);
+        await this.runCurrent(info.animate, audible);
       }
     };
     go().catch((e) => {
@@ -205,7 +209,7 @@ export class RaceChapter implements Chapter {
   private onControlChange(): void {
     this.syncControls(STEP_SETUP[this.step].control);
     // Slider/toggle re-runs always use Fast mode.
-    this.runCurrent(false).catch((e) => {
+    this.runCurrent(false, true).catch((e) => {
       if (!isCancelled(e)) console.error(e);
     });
   }
@@ -229,7 +233,7 @@ export class RaceChapter implements Chapter {
 
   // ---- step 1: one animated game ------------------------------------------
 
-  private async playDemo(animate: boolean): Promise<void> {
+  private async playDemo(animate: boolean, audible: boolean): Promise<void> {
     const epoch = this.ctx.epoch;
     const events: RaceEvent[] = [];
     const outcome = playRace(BASE, createRng(`${this.ctx.seed}|race-demo|${this.demoCount}`), (e) => events.push(e));
@@ -267,16 +271,19 @@ export class RaceChapter implements Chapter {
         pos >= L ? 'the finish!' : `square ${pos}`
       }`;
       place(ev.player, pos);
+      if (audible) sound.dice();
       if (!(await this.ctx.wait(turnMs, epoch))) return;
     }
     lanes.forEach((l) => l.classList.remove('active'));
     lanes[outcome.winner - 1].classList.add('winner');
     textEl.innerHTML = `<b class="p${outcome.winner}">Player ${outcome.winner} wins</b> after ${outcome.turns} turns.`;
+    if (audible) sound.verdict();
   }
 
   // ---- result steps -----------------------------------------------------------
 
-  private async runCurrent(animate: boolean): Promise<void> {
+  /** `audible`: the presenter asked for this (forward step, re-run or tweak), not a step back. */
+  private async runCurrent(animate: boolean, audible: boolean): Promise<void> {
     const epoch = this.ctx.epoch;
     const token = ++this.token;
     const live = () => this.ctx.alive(epoch) && token === this.token;
@@ -304,15 +311,21 @@ export class RaceChapter implements Chapter {
       p.catch(() => this.cache.get(k) === p && this.cache.delete(k));
       const final = await p;
       if (!live()) return;
-      for (const agg of [...snaps, final]) {
-        this.renderResult(agg, exact, baseline, showLength, 500);
-        await sleep(agg === final ? 0 : 900);
-        if (!live()) return;
-      }
+      const frames = [...snaps, final].map((agg) => ({ n: agg.n, data: agg }));
+      const done = await playBuildUp(
+        this.ctx,
+        epoch,
+        frames,
+        (agg, ms) => this.renderResult(agg, exact, baseline, showLength, ms),
+        { noun: { one: 'game', many: 'games' }, tweenMs: 500, holdMs: 900, alive: live },
+      );
+      if (done) sound.verdict();
     } else {
+      // A tweak (slider, toggle) or Fast mode: update straight away.
       const agg = await this.getAgg(cfg);
       if (!live()) return;
       this.renderResult(agg, exact, baseline, showLength, 300);
+      if (audible) sound.verdict();
     }
   }
 
@@ -367,7 +380,7 @@ export class RaceChapter implements Chapter {
 
   // ---- step 4: head-start sweep ---------------------------------------------
 
-  private async runSweep(animate: boolean): Promise<void> {
+  private async runSweep(animate: boolean, audible: boolean): Promise<void> {
     const epoch = this.ctx.epoch;
     const exacts = await Promise.all(HEAD_STARTS.map((h) => this.getExact({ ...BASE, p2HeadStart: h })));
     if (!this.ctx.alive(epoch)) return;
@@ -380,7 +393,7 @@ export class RaceChapter implements Chapter {
     const runFn: RunFn = <A>(_g: string, c: unknown) => this.getAgg(c as RaceConfig) as Promise<A>;
     const res = await sweep<RaceAggregate>('race', BASE, [{ key: 'p2HeadStart', values: HEAD_STARTS }], N, this.ctx.seed, { runFn });
     if (!this.ctx.alive(epoch)) return;
-    const points = res.cells.map((c, i) => ({ x: c.coords[0], k: c.aggregate.p1Wins, n: c.aggregate.n, exact: ex[i] }));
+    const points = res.cells.map((c, i) => ({ x: Number(c.coords[0]), k: c.aggregate.p1Wins, n: c.aggregate.n, exact: ex[i] }));
 
     const verdicts = points.map((p) => verdict(wilson(p.k, p.n)));
     const fairIdx = verdicts.findIndex((v) => v === 'Fair within margin');
@@ -391,13 +404,16 @@ export class RaceChapter implements Chapter {
 
     if (animate) {
       this.ctx.setSub(null);
+      sound.runStart();
       for (let i = 1; i <= points.length; i++) {
         await this.sweepChart.set({ ...base, points: points.slice(0, i) }, 0);
+        sound.tick();
         if (!(await this.ctx.wait(450, epoch))) return;
       }
     } else {
       await this.sweepChart.set({ ...base, points }, 0);
     }
     this.ctx.setSub(sub);
+    if (audible) sound.verdict();
   }
 }

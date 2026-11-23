@@ -4,8 +4,41 @@ import { createRng } from '../src/core/rng';
 import { wilson } from '../src/core/stats';
 import { DUEL_OUTCOMES, diceDuel, exactDuel, rollBattle, type DuelAggregate } from '../src/games/diceDuel';
 import { exactRace, playRace, race, type RaceAggregate, type RaceConfig, type RaceEvent } from '../src/games/race';
+import { games } from '../src/games/registry';
 
 const SEED = 'dgt-balance';
+
+describe('settings and metrics descriptions', () => {
+  for (const game of Object.values(games)) {
+    test(`${game.id}: every param matches defaultConfig and its range`, () => {
+      const cfg = game.defaultConfig as unknown as Record<string, unknown>;
+      const keys = new Set<string>();
+      for (const p of game.params) {
+        expect(keys.has(p.key), `duplicate ${p.key}`).toBe(false);
+        keys.add(p.key);
+        expect(p.key in cfg, `${p.key} missing from defaultConfig`).toBe(true);
+        const v = cfg[p.key];
+        if (p.kind === 'int') {
+          expect(Number.isInteger(v)).toBe(true);
+          expect(v as number).toBeGreaterThanOrEqual(p.min);
+          expect(v as number).toBeLessThanOrEqual(p.max);
+          expect(((v as number) - p.min) % (p.step ?? 1)).toBe(0);
+        } else if (p.kind === 'toggle') {
+          expect(typeof v).toBe('boolean');
+        } else {
+          expect(p.options.map((o) => o.value)).toContain(v);
+        }
+      }
+    });
+
+    test(`${game.id}: metrics have unique ids and read the default run`, () => {
+      const ids = game.metrics.map((m) => m.id);
+      expect(new Set(ids).size).toBe(ids.length);
+      const agg = runSync<never>(game.id, game.defaultConfig, 200, SEED);
+      for (const m of game.metrics) expect(m.read(agg).kind).toBe(m.kind);
+    });
+  }
+});
 
 describe('Dice Duel', () => {
   test('exact() enumerates 7,776 outcomes: 2890 / 2611 / 2275', () => {
@@ -40,6 +73,7 @@ describe('Race', () => {
     baseline: base,
     'head start 2': { ...base, p2HeadStart: 2 },
     'first-roll bonus': { ...base, p2FirstRollBonus: 1 },
+    'first-roll bonus 3, short track, d8': { ...base, p2FirstRollBonus: 3, trackLength: 12, dieSides: 8 },
   };
 
   for (const [name, cfg] of Object.entries(configs)) {

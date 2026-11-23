@@ -20,6 +20,8 @@ export interface AppContext {
   wait(ms: number, epoch: number): Promise<boolean>;
   /** Override the current step's sub-line (null restores the default). */
   setSub(text: string | null): void;
+  /** Show (or with null, hide) the replay label, e.g. "Replaying the first 100 games". */
+  setReplay(text: string | null): void;
 }
 
 export interface EnterInfo {
@@ -30,8 +32,11 @@ export interface EnterInfo {
 
 /** One chapter of the talk: a sequence of steps sharing one stage. */
 export interface Chapter {
+  /** Short, stable, URL-safe id used in playlists and deep links (`?set=duel,race`, `#race.4`). */
   id: string;
   title: string;
+  /** Rough presenting time, shown on the overview screen. */
+  minutes: number;
   steps: StepDef[];
   /** Show the "± is a 95% CI" footnote while this chapter is active. */
   showsStats?: boolean;

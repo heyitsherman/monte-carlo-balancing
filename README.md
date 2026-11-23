@@ -22,13 +22,19 @@ Open the page full-screen (F11) on the projector. Everything is keyboard-driven;
 | `F` | Toggle **Show** mode (batches 1 → 10 → 100 → 1,000 → 10,000 with pauses) / **Fast** mode (final result at once) |
 | `S` | Reseed with a random seed (footer shows the seed) |
 | `+` / `−` (also `↑` / `↓`) | Adjust the active slider / toggle (race chapter) |
-| `1` – `4` | Jump to chapter 1 (Title), 2 (Dice Duel), 3 (First-Player Problem), 4 (Closing) |
+| `1` – `9` | Jump to that chapter of the session (default talk: 1 Title, 2 Dice Duel, 3 First-Player Problem, 4 Closing) |
+| `O` | Overview: every chapter and step of the session; click a step to jump there |
+| `M` | Sound on / off (remembered on this device) |
 | `T` | Toggle light / dark theme |
 | `Esc` | Help overlay with these keys (any key or click closes it) |
 
-Mouse/touch: buttons in the footer (◀ ▶ R F ?), plus the slider and toggles in the race chapter.
+Mouse/touch: buttons in the footer (◀ ▶ R F O ♪ ?), plus the slider and toggles in the race chapter.
 
-**Deep links for rehearsal:** `#<chapter>.<step>`, both 1-based — e.g. `…/monte-carlo-balancing/#3.4` opens the head-start sweep. Without a hash, the app always opens on the title.
+**Sound** is on by default: dice, a blip when a run starts, a tick per batch, and a chime when a result lands. Browsers only allow audio after the first key press or click, so the opening slide is silent. `M` mutes; the choice is remembered per device, so a room of student laptops can be muted once.
+
+**Sessions:** pick chapters and their order with `?set=`, e.g. `…/monte-carlo-balancing/?set=duel,race` for just the two simulations. Chapter ids: `title`, `duel`, `race`, `closing`. Without `?set=` you get the full 5-minute talk. The overview (`O`) shows the session's link and the chapters it leaves out.
+
+**Deep links for rehearsal:** `#<chapter>.<step>` with a chapter id or a position in the session, step 1-based — e.g. `#race.4` or `#3.4` opens the head-start sweep. Without a hash, the session opens on its first chapter.
 
 ### Run of show (≈ 5 min)
 
@@ -103,19 +109,23 @@ npm run bench      # speed check against time budgets (kept out of CI: timing is
 src/
   core/
     rng.ts        seeded PRNG (sfc32, seeded via cyrb128 from string or int)
-    stats.ts      proportions + Wilson 95% CI, verdicts, mean CI, histogram helpers
+    stats.ts      proportions + Wilson 95% CI, target bands (assess), verdicts, mean CI, histogram helpers
+    metrics.ts    turns a game's metric descriptions into estimates with CIs (charts and the Lab use these)
     engine.ts     shared simulate loop, per-run seeding, Show-mode batch/checkpoint helpers
     protocol.ts   worker message types
     worker.ts     runs batches off the main thread, posts progress (≥ every 50 ms) and checkpoint snapshots
     runner.ts     main-thread API: run(gameId, config, n, seed, onProgress, {checkpoints}) → Promise<Aggregate>
-    sweep.ts      N-dimensional sweep over numeric config keys → grid of aggregates
+    sweep.ts      N-dimensional sweep over config keys (numbers, toggles, strategy choices) → grid of aggregates
   games/
-    types.ts      Game<Config, Outcome, Aggregate, Exact> interface
+    types.ts      Game<Config, Outcome, Aggregate, Exact> interface, with setting and metric descriptions
     diceDuel.ts   Risk-style battle + exact enumeration
     race.ts       first-player race + exact DP (without catch-up)
     registry.ts   gameId → Game
   ui/
-    presenter.ts  chapter/step state machine, keyboard, caption, footer, help
+    presenter.ts  chapter/step state machine, keyboard, caption, footer, help, overview
+    playlist.ts   ?set= sessions and #id.step deep links (pure, unit-tested)
+    buildUp.ts    the one animation rule: paced 1 → 10 → … → N replays, labelled as replays
+    audio.ts      synthesised sounds (Web Audio, no files) and the remembered mute setting
     charts/       hand-written SVG: bars + whiskers, convergence band, tug-of-war, sweep, histogram, dice
     chapters/     one file per chapter (bookends.ts holds Title and Closing)
   main.ts
@@ -128,12 +138,15 @@ The RNG stream for a run is derived from `(seed, gameId, config)`. Consequences:
 ## Adding a game
 
 1. **Game file** — create `src/games/myGame.ts` exporting an object that implements `Game<C, O, A>` (`src/games/types.ts`):
-   - `defaultConfig`: plain JSON numbers/booleans only, so any numeric key can be swept.
+   - `defaultConfig`: plain JSON values only (numbers, booleans, strings), so any key can be swept.
+   - `params`: one description per setting a person may change (`int` with min/max/step/unit, `toggle`, or `choice`), with a plain-words label and help line. Leave internal settings (safety caps) out. A test checks every description against `defaultConfig`.
+   - `metrics`: what to read from an aggregate (`proportion`, `mean` or `distribution`), with an optional `exact` reader and, for proportions, an optional design `target` (e.g. `FAIR_TARGET`, 50% ± 2).
+   - **Bot strategies** are settings too: a `choice` param naming the strategy plus `int` params for its knobs, read by `simulate`. They stay reproducible and can be swept.
    - `simulate(config, rng)`: plays **one** game; must be pure given the RNG.
    - `emptyAggregate()` / `accumulate(agg, outcome)`: a cumulative, structured-cloneable aggregate (mutating and returning `agg` is fine).
    - `exact(config)` *(optional)*: a closed-form or DP answer, used as a test oracle and as overlay markers.
 2. **Register it** — add one line to `src/games/registry.ts`. The worker, `runner.run('myGame', …)` and `sweep('myGame', …)` now work.
-3. **Chapter file** — create `src/ui/chapters/myGame.ts` implementing `Chapter` (`src/ui/types.ts`): a `steps` list of captions, `mount()` to build DOM once, and an idempotent `enter(step, info)`. Add it to the list in `src/main.ts`.
+3. **Chapter file** — create `src/ui/chapters/myGame.ts` implementing `Chapter` (`src/ui/types.ts`): a short URL-safe `id`, rough `minutes`, a `steps` list of captions, `mount()` to build DOM once, and an idempotent `enter(step, info)`. Make it self-contained: its first step should set the scene without relying on another chapter. Play build-ups with `playBuildUp` (`src/ui/buildUp.ts`) so every chapter follows the same animation rule. Add it to the `library` in `src/main.ts` (and to `defaultSet` if it belongs in the default talk).
 4. **Tests** — add exact-vs-simulation checks to `tests/games.test.ts` using `runSync`.
 
 **v2 heatmaps:** `sweep()` already takes any number of axes, e.g.
@@ -155,9 +168,11 @@ returns a row-major grid with `.at(i, j)`. A heatmap chapter needs only a new ch
 - **"± x pp"** is the half-width of the Wilson interval, which is slightly asymmetric; the whiskers and bands draw the true asymmetric bounds. Mean game length gets a normal-approximation 95% CI, so it also shows ± and n.
 - **Dice Duel runs from one 100,000-battle stream.** Steps 10 / 100 / 1,000 / 10,000 show cumulative snapshots of the same stream, so the bars at 10,000 are the first 10,000 battles of the convergence chart.
 - **Show vs Fast.** The mode is global (default Show, toggled with `F`) and applies to step entry and `R`. Slider/toggle changes in the race chapter always run Fast. Going backwards always renders instantly. Show-mode pacing happens on the main thread over checkpoint snapshots from the worker, so the worker never sleeps.
+- **One animation rule** (plan D8). Entering a run step or pressing `R` plays the paced build-up; moving a slider or toggle updates straight away. Build-ups replay results that are already computed, and the label bottom-right says so ("Replaying the first 100 games"), so the pacing isn't mistaken for the computer being slow.
+- **Target bands.** `assess(proportion, target)` compares the CI with a design band: *on target* if the whole CI is inside, a named direction if it is wholly outside, *not enough data* if it crosses an edge. The talk still shows the v1 verdict (a band of width zero, i.e. "does the CI contain 50%?") until the chapters move over in plan Phase 3.
 - **Step 2.6 zooms in.** On a 0–100% axis the ±0.9 pp whiskers and the exact lines merge into one smudge. The axis zooms to the data instead, and the bars fade into dots on the way, because bars cut off at a non-zero baseline would exaggerate the differences.
 - **Single illustrative games** (the one battle in 2.1, the one race in 3.1) are simulated on the main thread: one game takes microseconds. All bulk simulation and `exact()` calls run in the worker.
-- **Keys `1`–`4` map to the four screens in order** (Title, Dice Duel, Race, Closing). The footer numbers chapters the same way (`2/4 Dice Duel`), so the keys and the footer always agree. Added extras: `PgUp`/`PgDn` (clickers), `↑`/`↓` as aliases for `+`/`−`, `T` for theme, and deep links.
+- **Keys `1`–`9` map to the session's chapters in order** (in the default talk: Title, Dice Duel, Race, Closing). The footer numbers chapters the same way (`2/4 Dice Duel`), so the keys and the footer always agree. Numeric deep links count within the session too; id links (`#race.4`) work in any session that includes the chapter. Added extras: `PgUp`/`PgDn` (clickers), `↑`/`↓` as aliases for `+`/`−`, `T` for theme, and deep links.
 - **Reseed** cancels in-flight work by terminating and recreating the worker.
 - **"Games simulated"** in the footer is the session total, a nice live counter for the audience.
 - **Phones:** below 760 px wide the layout scrolls and readouts shrink below the projector minimums (readable, not polished: the projector is the primary screen).

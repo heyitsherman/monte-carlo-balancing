@@ -5,6 +5,7 @@ import type { Chapter } from '../types';
 export class TitleChapter implements Chapter {
   id = 'title';
   title = 'Title';
+  minutes = 0.5;
   steps = [{ caption: '' }];
 
   mount(stage: HTMLElement): void {
@@ -29,6 +30,7 @@ export class TitleChapter implements Chapter {
 export class ClosingChapter implements Chapter {
   id = 'closing';
   title = 'Closing';
+  minutes = 0.5;
   steps = [{ caption: 'Three things to take home.' }];
 
   mount(stage: HTMLElement): void {

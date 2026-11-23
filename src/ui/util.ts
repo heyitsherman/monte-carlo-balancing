@@ -53,7 +53,9 @@ export function animate(ms: number, frame: (t: number) => void, cancelled: () =>
     const t0 = performance.now();
     const tick = (now: number) => {
       if (cancelled()) return resolve();
-      const t = Math.min(1, (now - t0) / ms);
+      // rAF timestamps are frame start times and can be slightly earlier than t0: clamp at 0,
+      // or the first frame overshoots backwards (e.g. a bar at 0% gets a negative width).
+      const t = Math.min(1, Math.max(0, (now - t0) / ms));
       frame(easeInOut(t));
       if (t < 1) requestAnimationFrame(tick);
       else resolve();
