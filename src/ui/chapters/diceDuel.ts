@@ -15,7 +15,7 @@ import { renderBarChart, type BarChartData } from '../charts/barChart';
 import { renderConvergence, type ConvergenceData } from '../charts/convergenceChart';
 import { dieSvg } from '../charts/dice';
 import { ChartHost } from '../charts/host';
-import type { AppContext, Chapter, EnterInfo } from '../types';
+import type { AppContext, Chapter, EnterInfo, StepDef } from '../types';
 import { sound } from '../audio';
 import { playBuildUp } from '../buildUp';
 import { el, fx, sleep } from '../util';
@@ -26,8 +26,12 @@ const ARROW_BACK = '<span class="arrow arrow--back" aria-hidden="true"></span>';
 const CONFIG = diceDuel.defaultConfig;
 const TRACE_N = 100_000;
 const NOUN = { one: 'battle', many: 'battles' };
-/** n shown at steps 1..5 (index = step) */
-const STEP_N = [0, 10, 100, 1000, 10_000, 10_000];
+/** Steps: 0 one battle, 1 predict, 2–5 the bars at 10…10,000, 6 the exact math, 7 convergence. */
+const PREDICT_STEP = 1;
+const EXACT_STEP = 6;
+const CONV_STEP = 7;
+/** n shown on the bar steps (index = step). */
+const STEP_N = [0, 0, 10, 100, 1000, 10_000, 10_000];
 
 const LABELS: Record<DuelOutcome, string> = {
   attackerWinsBoth: 'Attacker wins both',
@@ -45,10 +49,15 @@ const MARGIN_SUB_LONGEST = 'Whiskers = 95% confidence interval: up to ± 88.8 pp
 export class DiceDuelChapter implements Chapter {
   id = 'duel';
   title = 'Dice Duel';
-  minutes = 1.5;
+  minutes = 1.75;
   showsStats = true;
-  steps = [
+  steps: StepDef[] = [
     { caption: 'Attacker rolls 3 dice, defender rolls 2. Who wins?', sub: 'Sort both. Highest vs highest, second vs second. Ties go to the defender.' },
+    {
+      caption: 'Predict: which outcome is most likely?',
+      sub: 'Attacker wins both, a split, or defender wins both? Take a show of hands before we run it.',
+      activity: true,
+    },
     { caption: '10 battles.', subVariants: [MARGIN_SUB_LONGEST] },
     { caption: '100.', subVariants: [MARGIN_SUB_LONGEST] },
     { caption: '1,000.', subVariants: [MARGIN_SUB_LONGEST] },
@@ -59,7 +68,7 @@ export class DiceDuelChapter implements Chapter {
     },
     {
       caption: 'Noise becomes signal.',
-      sub: 'Simulation agrees with the math. When the math is too ugly to do, you run the simulation instead.',
+      takeaway: 'Simulation agrees with the math. When the math is too ugly to do, you run the simulation instead.',
     },
   ];
 
@@ -136,7 +145,7 @@ export class DiceDuelChapter implements Chapter {
         this.show(this.battleView);
         if (info.direction === 'rerun') this.battleCount++;
         await this.renderBattle(info.animate, info.animate || info.direction === 'rerun');
-      } else if (step <= 5) {
+      } else if (step < CONV_STEP) {
         this.show(this.barsView);
         await this.renderBars(step, prev, info);
       } else {
@@ -240,14 +249,19 @@ export class DiceDuelChapter implements Chapter {
     const epoch = this.ctx.epoch;
     const ctx = this.ctx;
     const target = STEP_N[step];
-    const showExact = step === 5;
+    const showExact = step === EXACT_STEP;
+    if (step === PREDICT_STEP) {
+      // No data yet: the outcomes with question marks, so the room commits before the reveal.
+      await this.bars.set(this.barData(undefined, undefined, 0), info.animate ? 500 : 0);
+      return;
+    }
     if (!this.bars.current) await this.bars.set(this.barData(undefined, undefined, 0));
     const [snaps, exact] = await Promise.all([this.getTrace(), this.getExact()]);
     if (!ctx.alive(epoch)) return;
 
     const setN = async (n: number, ms: number, alpha: number, zoom = 0) => {
       const agg = snaps.get(n)!;
-      if (step < 5) ctx.setSub(this.marginSub(agg));
+      if (step < EXACT_STEP) ctx.setSub(this.marginSub(agg));
       await this.bars.set(this.barData(agg, exact, alpha, zoom), ms);
     };
 
@@ -260,7 +274,7 @@ export class DiceDuelChapter implements Chapter {
     } else if (info.animate && showExact) {
       // Exact lines fade in on the familiar 0–100% bars, then the axis zooms in so the
       // whiskers are big enough to see whether each exact line falls inside them.
-      if (prevStep === 5) await setN(target, 0, 0, 0);
+      if (prevStep === EXACT_STEP) await setN(target, 0, 0, 0);
       if (!(await ctx.wait(300, epoch))) return;
       sound.verdict();
       await setN(target, 900, 1, 0);

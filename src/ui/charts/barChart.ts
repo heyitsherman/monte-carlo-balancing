@@ -99,9 +99,11 @@ export function renderBarChart(d: BarChartData, w: number, h: number): string {
         d.exactAlpha > 0.01 && Number.isFinite(b.exact)
           ? `<div class="ro-exact" style="opacity:${d.exactAlpha}">exact ${fx(b.exact * 100, 2)}%</div>`
           : '';
+      // No data yet (the predict step): a question mark, not a dash.
+      const has = Number.isFinite(b.p);
       return `<div class="ro-col" style="--line:${b.color}">
-        <div class="ro-big">${fx(b.p * 100)}%</div>
-        <div class="ro-small">± ${fx(((b.hi - b.lo) / 2) * 100)} pp (n = ${formatInt(d.n)})</div>
+        <div class="ro-big">${has ? `${fx(b.p * 100)}%` : '?'}</div>
+        <div class="ro-small">${has ? `± ${fx(((b.hi - b.lo) / 2) * 100)} pp (n = ${formatInt(d.n)})` : 'your guess first'}</div>
         ${exact}
       </div>`;
     })

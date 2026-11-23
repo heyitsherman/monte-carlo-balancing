@@ -22,6 +22,7 @@ Open the page full-screen (F11) on the projector. Everything is keyboard-driven;
 | `F` | Toggle **Show** mode (batches 1 → 10 → 100 → 1,000 → 10,000 with pauses) / **Fast** mode (final result at once) |
 | `S` | Reseed with a random seed (footer shows the seed) |
 | `+` / `−` (also `↑` / `↓`) | Adjust the active slider / toggle (race chapter) |
+| `N` | When a verdict reads "Not enough data: run more": run 100,000 games of the same rules (also a button in the sub-line) |
 | `1` – `9` | Jump to that chapter of the session (default talk: 1 Title, 2 Dice Duel, 3 First-Player Problem, 4 Closing) |
 | `O` | Overview: every chapter and step of the session; click a step to jump there |
 | `M` | Sound on / off (remembered on this device) |
@@ -32,28 +33,34 @@ Mouse/touch: the buttons in the header band, top right (previous, next, re-run, 
 
 **Sound** is on by default: dice, a blip when a run starts, a tick per batch, and a chime when a result lands. Browsers only allow audio after the first key press or click, so the opening slide is silent. `M` mutes; the choice is remembered per device, so a room of student laptops can be muted once.
 
-**Sessions:** pick chapters and their order with `?set=`, e.g. `…/monte-carlo-balancing/?set=duel,race` for just the two simulations. Chapter ids: `title`, `duel`, `race`, `closing`. Without `?set=` you get the full 5-minute talk. The overview (`O`) shows the session's link and the chapters it leaves out.
+**Sessions:** pick chapters and their order with `?set=`, e.g. `…/monte-carlo-balancing/?set=duel,race` for just the two simulations. Chapter ids: `title`, `duel`, `race`, `playtests`, `closing`. Without `?set=` you get the default talk (title, duel, race, closing; about 5½ minutes). "Ten Playtests Prove Nothing" (`playtests`, about 1½ minutes) is not in the default; add it with `?set=title,duel,race,playtests,closing`. The overview (`O`) shows the session's link and the chapters it leaves out.
 
-**Deep links for rehearsal:** `#<chapter>.<step>` with a chapter id or a position in the session, step 1-based — e.g. `#race.4` or `#3.4` opens the head-start sweep. Without a hash, the session opens on its first chapter.
+**Deep links for rehearsal:** `#<chapter>.<step>` with a chapter id or a position in the session, step 1-based — e.g. `#race.5` or `#3.5` opens the head-start sweep. Without a hash, the session opens on its first chapter.
 
-### Run of show (≈ 5 min)
+### Run of show (about 5½ min)
 
-Numbers are chapter.step, as used by deep links and shown in the header band.
+Numbers are chapter.step, as used by deep links and shown in the header band. Sub-lines with a Mustard bar ask the room to do something; a Cobalt bar marks a conclusion, and each chapter's last step ends on its takeaway.
 
 | # | Caption | What happens |
 | --- | --- | --- |
 | 1 | Run it 10,000 times | Title + core message |
 | 2.1 | *Attacker rolls 3 dice, defender rolls 2. Who wins?* | One battle with dice faces and pairwise comparisons. `R` rolls another. |
-| 2.2–2.5 | *10 battles. / 100. / 1,000. / 10,000.* | Bar chart with 95% CI whiskers that visibly shrink (sub-line states the margin) |
-| 2.6 | *Now the exact math.* | Exact-value markers (dashed) fade in, then the axis zooms in and the bars become dots, so you can see each exact line fall inside its whisker |
-| 2.7 | *Noise becomes signal.* | Running estimate vs N (log axis, 1 → 100,000) with CI band and exact line |
-| 3.1 | *A simple race…* | One animated game on the track |
-| 3.2 | *Is it fair? Play it 10,000 times.* | Streams 1 → 10,000 games; verdict **Favors P1** |
-| 3.3 | *Fix #1: give Player 2 a head start.* | Press `+` twice: head start 2 flips it to **Favors P2** |
-| 3.4 | *Too far…* | Sweep of head start 0…6 — no whole number is fair, so the sub-line says *change the rule, not the number* |
-| 3.5 | *Fix #2: +1 on P2's first roll.* | Same math as a 1-square head start (see Decisions) |
-| 3.6 | *Fix #3: whoever is behind rolls 2 dice…* | Fairer, shorter games; length histogram vs baseline |
-| 4 | Three things to take home | Closing |
+| 2.2 | *Predict: which outcome is most likely?* | The three outcomes with question marks: take a show of hands |
+| 2.3–2.6 | *10 battles. / 100. / 1,000. / 10,000.* | Bar chart with 95% CI whiskers that visibly shrink (sub-line states the margin) |
+| 2.7 | *Now the exact math.* | Exact-value markers (dashed) fade in, then the axis zooms in and the bars become dots, so you can see each exact line fall inside its whisker |
+| 2.8 | *Noise becomes signal.* | Running estimate vs N (log axis, 1 → 100,000) with CI band and exact line. Takeaway: when the math is too ugly to do, run the simulation |
+| 3.1 | *A simple race…* | One animated game on the track; when it ends, the sub-line adds: *fair means fair across many games, not within one* |
+| 3.2 | *Predict: how often does Player 1 win?* | The result screen with question marks: everyone commits to a number |
+| 3.3 | *Is it fair? Play it 10,000 times.* | Streams 1 → 10,000 games: 61.8%, **Favors P1** (the fair band, 47–53%, is shaded on the bar) |
+| 3.4 | *Fix #1: give Player 2 a head start.* | Press `+`: head start 1 still **Favors P1**, head start 2 reads **Fair**, 3 overshoots to **Favors P2** |
+| 3.5 | *Too far…* | Sweep of head start 0…6 against the fair band: head start 2 lands inside it. *Next: two other ways to get there* |
+| 3.6 | *Fix #2: +1 on P2's first roll.* | Same math as a 1-square head start (see Decisions) |
+| 3.7 | *Fix #3: whoever is behind rolls 2 dice…* | Still **Favors P1**, but it plays differently: a "How it plays" table against the baseline. Takeaway: every fix changes how the game feels |
+| 4 | Five things to take home | Closing |
+
+**"Ten Playtests Prove Nothing"** (`playtests`, optional): 20 groups each play 10 games of the baseline race, shown as cards (one dot per game), then each group's naive conclusion (more wins = "has the edge", 5–5 = "looks fair"), then the truth from 10,000 games. The groups' games are the first 200 games of the race's own 10,000. Takeaway: ten playtests tell you how a game feels, not what its odds are.
+
+**If a verdict reads "Not enough data: run more"** (after `S`, head start 2 does this about 1 time in 5): the sub-line says which edge of the fair band the range crosses, and that edge is drawn solid on the bar. Press `N` and narrate the range shrinking as 100,000 games are added; the sub-line then states the settled verdict.
 
 The default seed is `dgt-balance`, so every rehearsal shows identical numbers. Pressing `S` gives fresh numbers; reload the page to return to the default seed.
 
@@ -77,11 +84,22 @@ Regenerate with `npm run calibrate`.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Simulated P1 win | 61.8% | 55.1% | 48.1% | 41.6% | 35.2% | 27.8% | 21.1% |
 | Exact P1 win | 61.89% | 55.30% | 48.38% | 41.33% | 34.37% | 27.72% | 21.58% |
-| Verdict | Favors P1 | Favors P1 | Favors P2 | Favors P2 | Favors P2 | Favors P2 | Favors P2 |
+| Verdict (fair = 50% ± 3) | Favors P1 | Favors P1 | Fair | Favors P2 | Favors P2 | Favors P2 | Favors P2 |
 
-All margins are ±0.8–1.0 pp. The crossover falls between 1 and 2, and **no whole-number head start is fair**.
+All margins are ±0.8–1.0 pp. Head start 2 is fair in truth (48.38%) and its range, 47.1–49.1%, sits inside the band. How often it reads "Not enough data" instead, from the exact odds: 21% of seeds at 10,000 games, 2.6% at 20,000, effectively never at 100,000.
 
-**Other fixes** (n = 10,000): P2 +1 on first roll → 55.0% ± 1.0 pp (exact 55.30%, Favors P1). Catch-up rule → 55.7% ± 1.0 pp (no closed form, Favors P1), with mean length down from 10.43 to 9.24 turns.
+**Other fixes** (n = 10,000): P2 +1 on first roll → 55.0% ± 1.0 pp (exact 55.30%, Favors P1). Catch-up rule → 55.7% ± 1.0 pp (no closed form, Favors P1).
+
+**How it plays** (n = 10,000, simulation only). The leader is read at the start, after every full round and at the finish; halfway is the middle round.
+
+| | Baseline | Catch-up |
+| --- | --- | --- |
+| Average game length | 10.43 turns | 9.24 turns |
+| Lead changes per game | 0.68 | 0.82 |
+| Comebacks: winner was behind at halfway | 24.1% | 35.9% |
+| Decided early: winner led from halfway on | 59.0% | 43.7% |
+
+**Ten playtests** (default seed): 14 groups say P1 is ahead, 6 see a 5–5 split and call it fair, none says P2 is ahead, so **6 of 20** draw the wrong conclusion. Exact expectation: a group sees 5–5 with probability 18.4% and P2 ahead with 13.6%, so 6.4 of 20 groups get it wrong on average.
 
 **Performance** (headless Chrome on the Windows 11 build machine): a 10,000-game race re-run updates the screen in ~25 ms; 100,000 dice battles plus 100+ snapshots take < 150 ms including page load. The Show-mode 1 → 10,000 sequence takes ~3.7 s for the race baseline and ~6.5 s when replaying the Dice Duel bars with `R`.
 
@@ -110,7 +128,7 @@ npm run bench      # speed check against time budgets (kept out of CI: timing is
 src/
   core/
     rng.ts        seeded PRNG (sfc32, seeded via cyrb128 from string or int)
-    stats.ts      proportions + Wilson 95% CI, target bands (assess), verdicts, mean CI, histogram helpers
+    stats.ts      proportions + Wilson 95% CI, target bands (assess, FAIR_TARGET), mean CI, histogram helpers
     metrics.ts    turns a game's metric descriptions into estimates with CIs (charts and the Lab use these)
     engine.ts     shared simulate loop, per-run seeding, Show-mode batch/checkpoint helpers
     protocol.ts   worker message types
@@ -132,9 +150,10 @@ src/
     layout.ts     layout stability: reserved heights and the ?layout-check observer
     playlist.ts   ?set= sessions and #id.step deep links (pure, unit-tested)
     buildUp.ts    the one animation rule: paced 1 → 10 → … → N replays, labelled as replays
+    targetNotes.ts the words of the "Not enough data" prompt, from the real numbers (pure, unit-tested)
     audio.ts      synthesised sounds (Web Audio, no files) and the remembered mute setting
-    charts/       hand-written SVG: bars + whiskers, convergence band, tug-of-war, sweep, histogram, dice
-    chapters/     one file per chapter (bookends.ts holds Title and Closing)
+    charts/       hand-written SVG: bars + whiskers, convergence band, tug-of-war and sweep (both shade the target band), dice; histogram is kept for the Lab
+    chapters/     one file per chapter (bookends.ts holds Title and Closing; playtests.ts is Ten Playtests Prove Nothing)
   main.ts
 tests/            Vitest suites (assertions only)
 scripts/          calibrate.ts (README numbers) and benchmark.ts, run with vite-node
@@ -147,7 +166,7 @@ The RNG stream for a run is derived from `(seed, gameId, config)`. Consequences:
 1. **Game file** — create `src/games/myGame.ts` exporting an object that implements `Game<C, O, A>` (`src/games/types.ts`):
    - `defaultConfig`: plain JSON values only (numbers, booleans, strings), so any key can be swept.
    - `params`: one description per setting a person may change (`int` with min/max/step/unit, `toggle`, or `choice`), with a plain-words label and help line. Leave internal settings (safety caps) out. A test checks every description against `defaultConfig`.
-   - `metrics`: what to read from an aggregate (`proportion`, `mean` or `distribution`), with an optional `exact` reader and, for proportions, an optional design `target` (e.g. `FAIR_TARGET`, 50% ± 2).
+   - `metrics`: what to read from an aggregate (`proportion`, `mean` or `distribution`), with an optional `exact` reader and, for proportions, an optional design `target` (e.g. `FAIR_TARGET`, 50% ± 3).
    - **Bot strategies** are settings too: a `choice` param naming the strategy plus `int` params for its knobs, read by `simulate`. They stay reproducible and can be swept.
    - `simulate(config, rng)`: plays **one** game; must be pure given the RNG.
    - `emptyAggregate()` / `accumulate(agg, outcome)`: a cumulative, structured-cloneable aggregate (mutating and returning `agg` is fine).
@@ -170,13 +189,15 @@ returns a row-major grid with `.at(i, j)`. A heatmap chapter needs only a new ch
 
 - **Track length 20.** Exact baseline P1 win rate 61.89% (inside the 57–65% band, ~12 CIs from 50% at n = 10,000). Round, and 21 squares fit legibly on a projector.
 - **Fix #2 is mathematically identical to a 1-square head start.** Without catch-up, the players never interact, so "+1 on the first roll" just shifts every later position by 1. The exact values are equal (55.30%), and the step's sub-line says so. That is a useful lesson: different-looking rules can be the same rule, so the step stays in.
-- **No integer head start is fair** (1 → 55.3%, 2 → 48.4%). The sweep step's sub-line says so: change the rule, not the number. Catch-up gets closer (55.7%) but still favors P1 at n = 10,000. The caption says "Fairer", not "fair", and the screen shows the true verdict.
+- **Fair means 50% ± 3** (plan D13). Under ± 2, head start 2 (48.38%, fair in truth) read "Not enough data" even at 200,000 games, which made the storyline murky. Under ± 3 it reads Fair at 10,000 games, and fixes #2 and #3 become alternatives that feel different rather than attempts to reach fairness. Catch-up gets closer (55.7%) but still favors P1, and its "How it plays" table shows why you might pick it anyway.
 - **Game length** counts both players' turns (P1 winning on their 5th move = 9 turns).
 - **"± x pp"** is the half-width of the Wilson interval, which is slightly asymmetric; the whiskers and bands draw the true asymmetric bounds. Mean game length gets a normal-approximation 95% CI, so it also shows ± and n.
 - **Dice Duel runs from one 100,000-battle stream.** Steps 10 / 100 / 1,000 / 10,000 show cumulative snapshots of the same stream, so the bars at 10,000 are the first 10,000 battles of the convergence chart.
 - **Show vs Fast.** The mode is global (default Show, toggled with `F`) and applies to step entry and `R`. Slider/toggle changes in the race chapter always run Fast. Going backwards always renders instantly. Show-mode pacing happens on the main thread over checkpoint snapshots from the worker, so the worker never sleeps.
 - **One animation rule** (plan D8). Entering a run step or pressing `R` plays the paced build-up; moving a slider or toggle updates straight away. Build-ups replay results that are already computed, and the label in the footer says so ("Replaying the first 100 games"), so the pacing isn't mistaken for the computer being slow.
-- **Target bands.** `assess(proportion, target)` compares the CI with a design band: *on target* if the whole CI is inside, a named direction if it is wholly outside, *not enough data* if it crosses an edge. The talk still shows the v1 verdict (a band of width zero, i.e. "does the CI contain 50%?") until the chapters move over in plan Phase 3.
+- **Target bands.** `assess(proportion, target)` compares the CI with a design band: *on target* if the whole CI is inside, a named direction if it is wholly outside, *not enough data* if it crosses an edge. This separates "is a bias detectable?" from "does it matter?": the v1 verdict (does the CI contain 50%?) is gone.
+- **"Not enough data" comes with its own way out.** `N` (or the button in the sub-line) runs 100,000 games of the same rules. Because a run's stream depends only on (seed, game, rules), the first 10,000 of those games are the ones already on screen, so the build-up is labelled "Adding games: 50,000 of 100,000", not a fresh run. If it is still unclear at 100,000, the sub-line says to widen the range or nudge the rule instead of running more.
+- **Predict first.** Both simulations ask the room to commit before the reveal (2.2, 3.2), on the same screen the answer will appear on, so the reveal lands as a comparison with their guess.
 - **Step 2.6 zooms in.** On a 0–100% axis the ±0.9 pp whiskers and the exact lines merge into one smudge. The axis zooms to the data instead, and the bars fade into dots on the way, because bars cut off at a non-zero baseline would exaggerate the differences.
 - **Single illustrative games** (the one battle in 2.1, the one race in 3.1) are simulated on the main thread: one game takes microseconds. All bulk simulation and `exact()` calls run in the worker.
 - **Keys `1`–`9` map to the session's chapters in order** (in the default talk: Title, Dice Duel, Race, Closing). The header band numbers chapters the same way (`2 Dice Duel, Step 3 of 7`), so the keys and the band always agree. Numeric deep links count within the session too; id links (`#race.4`) work in any session that includes the chapter. Added extras: `PgUp`/`PgDn` (clickers), `↑`/`↓` as aliases for `+`/`−`, `T` for theme, and deep links.

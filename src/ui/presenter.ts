@@ -3,7 +3,7 @@ import type { Runner } from '../core/runner';
 import { formatInt } from '../core/stats';
 import { sound } from './audio';
 import { parseHash, parsePlaylist, playlistUrl } from './playlist';
-import type { AppContext, Chapter, EnterInfo, Mode } from './types';
+import type { AppContext, Chapter, EnterInfo, Mode, SubOptions } from './types';
 import { icon, MARK_SVG } from './icons';
 import { LayoutCheck, reserveHeight } from './layout';
 import { el, esc } from './util';
@@ -23,6 +23,7 @@ function keyRows(chapterCount: number): [string, string][] {
     [kbd('F'), 'Show mode or Fast mode'],
     [kbd('S'), 'New random seed'],
     [`${kbd('+')} ${kbd('−')}`, 'Adjust the active slider or switch'],
+    [kbd('N'), 'Run 10× more games, when a verdict says “Not enough data”'],
     [chapterCount > 1 ? `${kbd('1')} to ${kbd(String(Math.min(9, chapterCount)))}` : kbd('1'), 'Jump to a chapter'],
     [kbd('O'), 'Overview: every chapter and step'],
     [kbd('M'), 'Sound on or off'],
@@ -56,6 +57,7 @@ export class Presenter {
   private seed = DEFAULT_SEED;
   private epoch = 0;
   private subOverride: string | null = null;
+  private subOpts: SubOptions = {};
   /** The session's chapters, in playlist order. */
   private chapters: Chapter[];
 
@@ -102,8 +104,9 @@ export class Presenter {
       runner,
       alive: (e) => e === self.epoch,
       wait: (ms, e) => new Promise((r) => setTimeout(() => r(e === self.epoch), ms)),
-      setSub: (text) => {
+      setSub: (text, opts = {}) => {
         self.subOverride = text;
+        self.subOpts = text === null ? {} : opts;
         self.renderSub();
       },
       setReplay: (text) => {
@@ -237,6 +240,7 @@ export class Presenter {
     this.ci = ci;
     this.si = si;
     this.subOverride = null;
+    this.subOpts = {};
     this.ctx.setReplay(null);
     this.stages.forEach((s, i) => (s.hidden = i !== ci));
     const ch = this.chapters[ci];
@@ -259,7 +263,8 @@ export class Presenter {
   /** The sub-line takes the height of the tallest text this step can show, so swapping it never moves the stage. */
   private reserveSub(): void {
     const step = this.chapters[this.ci].steps[this.si];
-    reserveHeight(this.subEl, [step.sub ?? '', ...(step.subVariants ?? [])]);
+    const own = step.takeaway ? `Takeaway: ${step.takeaway}` : (step.sub ?? '');
+    reserveHeight(this.subEl, [own, ...(step.subVariants ?? [])]);
   }
 
   private progressFraction(): number {
@@ -332,9 +337,35 @@ export class Presenter {
 
   // ---- rendering --------------------------------------------------------------
 
+  /**
+   * The sub-line: the step's own line, its takeaway (last step of a chapter), or a line a chapter
+   * set while the step plays. Prompts (act now) get a Mustard bar, conclusions a Cobalt one.
+   */
   private renderSub(): void {
-    const text = this.subOverride ?? this.chapters[this.ci].steps[this.si].sub ?? '';
-    this.subEl.textContent = text;
+    const step = this.chapters[this.ci].steps[this.si];
+    let tone: SubOptions['tone'] = undefined;
+    this.subEl.textContent = '';
+    if (this.subOverride !== null) {
+      this.subEl.textContent = this.subOverride;
+      tone = this.subOpts.tone;
+      const action = this.subOpts.action;
+      if (action) {
+        const b = el('button', { type: 'button', class: 'sub-action' }, esc(action.label));
+        b.addEventListener('click', () => {
+          b.blur();
+          action.run();
+        });
+        this.subEl.append(' ', b);
+      }
+    } else if (step.takeaway) {
+      this.subEl.innerHTML = `<strong>Takeaway:</strong> ${esc(step.takeaway)}`;
+      tone = 'note';
+    } else {
+      this.subEl.textContent = step.sub ?? '';
+      if (step.activity) tone = 'prompt';
+    }
+    this.subEl.classList.toggle('sub--prompt', tone === 'prompt');
+    this.subEl.classList.toggle('sub--note', tone === 'note');
   }
 
   private renderFooter(): void {

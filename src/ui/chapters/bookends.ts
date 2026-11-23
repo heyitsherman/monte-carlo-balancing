@@ -31,13 +31,15 @@ export class ClosingChapter implements Chapter {
   id = 'closing';
   title = 'Closing';
   minutes = 0.5;
-  steps = [{ caption: 'Three things to take home.' }];
+  steps = [{ caption: 'Five things to take home.' }];
 
   mount(stage: HTMLElement): void {
     stage.classList.add('ch-closing');
     stage.innerHTML = `
       <ol class="takeaways">
         <li><b>Run it thousands of times.</b> 10 playtests prove nothing about a 5% edge.</li>
+        <li><b>Balanced means on target.</b> Decide what “close enough” is before you run it.</li>
+        <li><b>Fair isn’t always the goal.</b> A boss most players beat on the first try is unfair on purpose.</li>
         <li><b>Change one thing, re-run, compare.</b></li>
         <li><b>The simulation only knows what its players know.</b> Playtest anyway.</li>
       </ol>`;

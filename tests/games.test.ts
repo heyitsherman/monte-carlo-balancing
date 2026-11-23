@@ -122,6 +122,25 @@ describe('Race', () => {
     expect(Math.abs(agg.p1Wins / agg.n - 0.5)).toBeLessThan(Math.abs(e.p1Win - 0.5));
   });
 
+  test('feel metrics: catch-up brings more comebacks and lead changes, fewer early decisions', () => {
+    const plain = runSync<RaceAggregate>('race', base, 50_000, SEED);
+    const catchUp = runSync<RaceAggregate>('race', { ...base, catchUp: true }, 50_000, SEED);
+    expect(catchUp.comebacks / catchUp.n).toBeGreaterThan(plain.comebacks / plain.n + 0.05);
+    expect(catchUp.leadChangesSum / catchUp.n).toBeGreaterThan(plain.leadChangesSum / plain.n);
+    expect(catchUp.decidedEarly / catchUp.n).toBeLessThan(plain.decidedEarly / plain.n - 0.05);
+  });
+
+  test('feel metrics are consistent within each game', () => {
+    const rng = createRng('feel');
+    for (let i = 0; i < 2000; i++) {
+      const o = playRace({ ...base, catchUp: i % 2 === 0, p2HeadStart: i % 4 }, rng);
+      expect(o.leadChanges).toBeGreaterThanOrEqual(0);
+      expect(o.comeback && o.decidedEarly).toBe(false);
+      // coming back from behind means the lead changed at least once
+      if (o.comeback) expect(o.leadChanges).toBeGreaterThanOrEqual(1);
+    }
+  });
+
   test('logged play matches silent play', () => {
     const events: RaceEvent[] = [];
     const a = playRace({ ...base, catchUp: true }, createRng('log'), (e) => events.push(e));

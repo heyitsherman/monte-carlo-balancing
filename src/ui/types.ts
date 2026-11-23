@@ -9,6 +9,18 @@ export interface StepDef {
   sub?: string;
   /** Every other sub-line this step can show (via `setSub`), so its height can be reserved up front. */
   subVariants?: string[];
+  /** The sub-line asks the room to do something (predict, vote): marked like an activity. */
+  activity?: boolean;
+  /** A chapter's last step: its one-line takeaway, shown in place of the sub-line. */
+  takeaway?: string;
+}
+
+/** How a sub-line set by a chapter is shown. */
+export interface SubOptions {
+  /** 'prompt': the room or presenter should act (Mustard bar); 'note': a conclusion (Cobalt bar). */
+  tone?: 'prompt' | 'note';
+  /** A button at the end of the line, e.g. "Run 100,000 games (N)". */
+  action?: { label: string; run: () => void };
 }
 
 export interface AppContext {
@@ -21,7 +33,7 @@ export interface AppContext {
   /** Sleep, then report whether `epoch` is still current. */
   wait(ms: number, epoch: number): Promise<boolean>;
   /** Override the current step's sub-line (null restores the default). */
-  setSub(text: string | null): void;
+  setSub(text: string | null, opts?: SubOptions): void;
   /** Show (or with null, hide) the replay label, e.g. "Replaying the first 100 games". */
   setReplay(text: string | null): void;
 }

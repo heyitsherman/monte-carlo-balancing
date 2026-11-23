@@ -9,7 +9,6 @@ import {
   formatProportion,
   histAdd,
   meanCI,
-  verdict,
   wilson,
   type Proportion,
   type Target,
@@ -86,10 +85,12 @@ describe('stats', () => {
     expect(w.hi).toBe(1);
   });
 
-  test('verdict', () => {
-    expect(verdict(wilson(5000, 10_000))).toBe('Fair within margin');
-    expect(verdict(wilson(6180, 10_000))).toBe('Favors P1');
-    expect(verdict(wilson(4800, 10_000))).toBe('Favors P2');
+  test('fairness verdicts at 10,000 games (50% ± 3)', () => {
+    expect(assess(wilson(5000, 10_000), FAIR_TARGET).label).toBe('Fair');
+    expect(assess(wilson(6180, 10_000), FAIR_TARGET).label).toBe('Favors P1');
+    expect(assess(wilson(4160, 10_000), FAIR_TARGET).label).toBe('Favors P2');
+    // the race's 2-square head start with the default seed: fair in truth (48.38%), and it reads fair
+    expect(assess(wilson(4810, 10_000), FAIR_TARGET).label).toBe('Fair');
   });
 
   test('formatting', () => {
@@ -180,8 +181,14 @@ describe('target bands', () => {
   const ci = (p: number, lo: number, hi: number): Proportion => ({ k: 0, n: 1, p, lo, hi, marginPP: ((hi - lo) / 2) * 100 });
   const boss: Target = { center: 0.7, tolerance: 0.03, labels: { below: 'Too hard', on: 'On target', above: 'Too easy' } };
 
+  test('the fairness band is 50% ± 3 (plan D13)', () => {
+    expect(FAIR_TARGET.center - FAIR_TARGET.tolerance).toBeCloseTo(0.47, 12);
+    expect(FAIR_TARGET.center + FAIR_TARGET.tolerance).toBeCloseTo(0.53, 12);
+  });
+
   test('whole CI inside the band → on target', () => {
     expect(assess(ci(0.5, 0.49, 0.51), FAIR_TARGET)).toMatchObject({ status: 'on', label: 'Fair' });
+    expect(assess(ci(0.481, 0.471, 0.491), FAIR_TARGET).status).toBe('on');
     const a = assess(ci(0.7, 0.68, 0.72), boss);
     expect(a).toMatchObject({ status: 'on', label: 'On target' });
     expect(a.bandLo).toBeCloseTo(0.67, 12);
@@ -195,8 +202,8 @@ describe('target bands', () => {
   });
 
   test('CI crossing a band edge → not enough data', () => {
-    // head start 2 in the race: 48.1% ± 1.0 crosses the 48% edge of 50 ± 2
-    expect(assess(ci(0.481, 0.471, 0.491), FAIR_TARGET)).toMatchObject({ status: 'unclear', label: NOT_ENOUGH_DATA });
+    // e.g. a reseed puts head start 2 at 47.5% ± 1.0: the range crosses the 47% edge
+    expect(assess(ci(0.475, 0.465, 0.485), FAIR_TARGET)).toMatchObject({ status: 'unclear', label: NOT_ENOUGH_DATA });
     // a CI wider than the whole band can't confirm anything
     expect(assess(ci(0.5, 0.4, 0.6), FAIR_TARGET).status).toBe('unclear');
   });
@@ -207,13 +214,6 @@ describe('target bands', () => {
     expect(assess(wilson(0, 0), FAIR_TARGET).status).toBe('unclear');
   });
 
-  test('v1 verdict is unchanged: fair iff the CI contains 50%', () => {
-    for (const k of [4800, 4900, 4950, 5000, 5050, 5100, 5200, 6180]) {
-      const w = wilson(k, 10_000);
-      const old = w.lo <= 0.5 && w.hi >= 0.5 ? 'Fair within margin' : w.p > 0.5 ? 'Favors P1' : 'Favors P2';
-      expect(verdict(w)).toBe(old);
-    }
-  });
 });
 
 describe('metrics', () => {

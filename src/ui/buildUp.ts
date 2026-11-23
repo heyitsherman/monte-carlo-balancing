@@ -25,6 +25,13 @@ export interface BuildUpOptions {
   holdMs?: number;
   /** Extra liveness check (e.g. a control changed mid-replay). */
   alive?: () => boolean;
+  /** Label for a frame, when "Replaying the first N …" isn't what is happening. */
+  label?: (n: number) => string;
+}
+
+/** Label for extending a run, e.g. "Adding games: 50,000 of 100,000". */
+export function addingLabel(n: number, total: number, noun: BuildUpOptions['noun']): string {
+  return `Adding ${noun.many}: ${formatInt(n)} of ${formatInt(total)}`;
 }
 
 export function replayLabel(n: number, noun: BuildUpOptions['noun']): string {
@@ -49,7 +56,7 @@ export async function playBuildUp<T>(
   for (let i = 0; i < frames.length; i++) {
     if (!live()) return false;
     const last = i === frames.length - 1;
-    ctx.setReplay(last ? null : replayLabel(frames[i].n, opts.noun));
+    ctx.setReplay(last ? null : (opts.label ?? ((n) => replayLabel(n, opts.noun)))(frames[i].n));
     if (!last) sound.tick();
     await show(frames[i].data, tweenMs);
     if (!last && !((await ctx.wait(holdMs, epoch)) && live())) return false;

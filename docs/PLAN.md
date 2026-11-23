@@ -106,6 +106,15 @@ Turn "Run it 10,000 times" from a fixed 5-minute talk into a modular kit for tea
 
 **Done when:** calibrate numbers are regenerated, the README tables are updated, and the default 5-minute playlist still runs in about 5 minutes.
 
+**Notes from execution:**
+- The predict beats are steps of their own (Dice Duel 2.2, race 3.2), shown on the screen the answer will appear on, with question marks. Later steps shift by one, so deep links changed: the head-start sweep is now `#race.5`.
+- The default talk is about 5½ minutes (the two predict beats add about 30 seconds). "Ten Playtests Prove Nothing" (`playtests`, about 1½ minutes) is in the library but not in the default playlist; add it with `?set=title,duel,race,playtests,closing`.
+- The groups' games are the first 200 games of the race's own run for the seed, so the chapter's truth (10,000 games) contains them. Default seed: 6 of 20 groups get it wrong (all 5–5 ties); exact expectation 6.4.
+- `verdict()` is gone; every verdict uses `assess()` with `FAIR_TARGET` at 50% ± 3. The tug-of-war and the sweep shade the band; a crossed edge is drawn solid with its value.
+- The "Not enough data" prompt lives in the sub-line (Mustard bar, with a button), not under the verdict: the readout had no spare height at 1280×720, and the sub-line reserves the prompt's height, so nothing moves when it appears. The resolved line gets the Cobalt bar.
+- Feel metrics read the leader after each full round, so moving first is not counted as a lead. Catch-up versus baseline (10,000 games): comebacks 35.9% vs 24.1%, decided early 43.7% vs 59.0%, lead changes 0.82 vs 0.68. They replace the game-length histogram in step 3.7 (the histogram chart stays for the Lab).
+- Takeaways: Dice Duel ends on "When the math is too ugly to do, you run the simulation instead", the race on "Every fix changes how the game feels", and Ten Playtests on "Ten playtests tell you how a game feels, not what its odds are". The closing has five takeaways.
+
 ## Phase 4: New chapters
 
 Each chapter is self-contained, has an exact answer to check against where one exists, comes with Lab presets, and has its balance target agreed with Herman before tuning.
@@ -147,7 +156,7 @@ Snowball rules, house edge and roguelike win rates are discussion prompts in tha
 
 ## Decided after the plan was agreed
 
-1. **Race storyline under target bands (D13, 24 Nov 2026): option (b), a fairness band of 50% ± 3.** Under ± 2, head start 2 (exact 48.38%) read "Not enough data" even at 200,000 runs. Under ± 3 it reads "Fair" at 10,000 runs with the default seed, and the storyline becomes "head start 2 is fair enough; fixes #2 and #3 are alternatives that feel different". How often head start 2 reads "Not enough data" (from the exact odds): 21% of seeds at 10,000 runs, 2.6% at 20,000, effectively never at 100,000. Head start 1 does so 0.4% of the time at 10,000 runs; the other race configurations never. `FAIR_TARGET` changes to ± 3 in Phase 3.
+1. **Race storyline under target bands (D13, 24 Nov 2026): option (b), a fairness band of 50% ± 3.** Under ± 2, head start 2 (exact 48.38%) read "Not enough data" even at 200,000 runs. Under ± 3 it reads "Fair" at 10,000 runs with the default seed, and the storyline becomes "head start 2 is fair enough; fixes #2 and #3 are alternatives that feel different". How often head start 2 reads "Not enough data" (from the exact odds): 21% of seeds at 10,000 runs, 2.6% at 20,000, effectively never at 100,000. Head start 1 does so 0.4% of the time at 10,000 runs; the other race configurations never. `FAIR_TARGET` changed to ± 3 in Phase 3.
 2. **"Not enough data" prompt (Phase 3, shared by the talk and the Lab).** Written for the room, because the projector shows everything:
    - The verdict stays "Not enough data: run more". Under it, one sentence with the real numbers: "Too close to call. The likely range, 47.1–49.1%, crosses the edge of "fair" at 47%. More games shrink the range." The crossed band edge is highlighted on the chart where the range bar crosses it.
    - One action, as a button and a key: **Run 100,000 games (N)**. It is an explicit run, so it follows D8: the chart adds games from 10,000 to 100,000 (label "Adding games: 50,000 of 100,000") and the range visibly shrinks until it clears the edge.

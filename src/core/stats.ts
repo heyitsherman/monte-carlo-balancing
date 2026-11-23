@@ -84,30 +84,16 @@ export function assess(prop: Proportion, target: Target): Assessment {
   return { status, label, bandLo, bandHi };
 }
 
-/** Fairness target used by symmetric two-player games: 50% ± 2 pp. */
+/**
+ * Fairness target used by symmetric two-player games: 50% ± 3 pp (plan D13). Wide enough that a
+ * rule which is fair in truth (the race's 2-square head start, 48.4%) reads "Fair" at 10,000 runs,
+ * narrow enough that a 5-point edge never does.
+ */
 export const FAIR_TARGET: Target = {
   center: 0.5,
-  tolerance: 0.02,
+  tolerance: 0.03,
   labels: { below: 'Favors P2', on: 'Fair', above: 'Favors P1' },
 };
-
-export type Verdict = 'Fair within margin' | 'Favors P1' | 'Favors P2';
-
-/** Zero-width band at 50%: "unclear" (the CI contains 50%) reads as "Fair within margin". */
-const SIGNIFICANCE_TARGET: Target = {
-  center: 0.5,
-  tolerance: 0,
-  labels: { below: 'Favors P2', on: 'Fair within margin', above: 'Favors P1', unclear: 'Fair within margin' },
-};
-
-/**
- * The v1 verdict: fair iff the 95% CI contains 50%. This is a significance test, so it
- * answers "is a bias detectable?", not "does it matter?". Kept until the chapters move to
- * target bands (`assess` with `FAIR_TARGET`, plan Phase 3).
- */
-export function verdict(p1: Proportion): Verdict {
-  return assess(p1, SIGNIFICANCE_TARGET).label as Verdict;
-}
 
 const intFmt = new Intl.NumberFormat('en-US');
 export function formatInt(n: number): string {

@@ -196,6 +196,49 @@ body {
   line-height: 1.4;
   color: var(--c-text-muted);
 }
+/* A sub-line that asks the room to act (predict, run more) carries an activity bar (Mustard);
+   a conclusion or takeaway carries the key bar (Cobalt). Text stays ink in both. */
+.sub--prompt,
+.sub--note {
+  color: var(--c-text);
+  border-left: var(--bar-w) solid transparent;
+  padding-left: 0.75rem;
+}
+.sub--prompt {
+  border-left-color: var(--c-mustard);
+}
+.sub--note {
+  border-left-color: var(--c-cobalt);
+}
+.sub-action {
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.9em;
+  line-height: 1.2;
+  margin-left: 0.25rem;
+  padding: 0.05em 0.5em;
+  /* top-aligned and shorter than the line, so the button never makes its line taller */
+  vertical-align: top;
+  max-height: 1.4em;
+  border: var(--border-control) solid var(--c-text);
+  background: var(--c-text);
+  color: var(--c-bg);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
+}
+@media (hover: hover) {
+  .sub-action:hover {
+    background: transparent;
+    color: var(--c-text);
+  }
+}
+.sub-action:active {
+  background: color-mix(in srgb, var(--c-text) 12%, var(--c-bg));
+  color: var(--c-text);
+  transition-duration: 0s;
+}
 
 .stage-wrap {
   min-height: 0;
@@ -524,6 +567,30 @@ kbd .arrow {
   fill: var(--c-text-muted);
   opacity: 0.45;
 }
+/* Target band: shaded, edges dashed; the edge a CI crosses is drawn solid in ink. */
+.chart .target-band {
+  fill: var(--c-teal-tint);
+}
+.chart .band-edge {
+  stroke: var(--fair);
+  stroke-width: 3;
+  stroke-dasharray: 6 6;
+}
+.chart .band-edge.crossed {
+  stroke: var(--c-text);
+  stroke-width: 4;
+  stroke-dasharray: none;
+}
+.chart .crossed-label {
+  font-family: var(--font-data);
+  font-weight: 600;
+  font-size: calc(20px * var(--fs, 1));
+}
+.chart .dot.unclear,
+.chart .legend-dot.unclear {
+  stroke: var(--c-text);
+  stroke-width: 3;
+}
 .chart .hist-ref {
   fill: none;
   stroke: var(--c-text);
@@ -674,14 +741,14 @@ kbd .arrow {
   margin: 0;
 }
 .takeaways {
-  font-size: 2.25rem;
-  line-height: 1.35;
+  font-size: 2rem;
+  line-height: 1.3;
   max-width: 85rem;
   margin: 0;
   padding-left: 1.6em;
 }
 .takeaways li {
-  margin: 0.55em 0;
+  margin: 0.45em 0;
 }
 .takeaways li::marker {
   font-family: var(--font-voice);
@@ -945,11 +1012,10 @@ kbd .arrow {
   flex: 1 1 auto;
   min-height: 0;
 }
-.result-grid:has(.length-card[hidden]) {
+.result-grid:has(.feel-card[hidden]) {
   grid-template-columns: 1fr;
 }
-.race-readout,
-.length-readout {
+.race-readout {
   display: grid;
   grid-template-columns: max-content max-content 1fr;
   column-gap: 1.25rem;
@@ -957,21 +1023,18 @@ kbd .arrow {
   align-content: center;
   font-variant-numeric: tabular-nums;
 }
-.result-grid:has(.length-card[hidden]) .race-readout {
+.result-grid:has(.feel-card[hidden]) .race-readout {
   justify-content: center;
   grid-template-columns: max-content max-content max-content;
 }
-.rr-row,
-.lr-row {
+.rr-row {
   display: contents;
 }
-.rr-name,
-.lr-name {
+.rr-name {
   font-size: 1.75rem;
   font-weight: 700;
 }
-.rr-big,
-.lr-big {
+.rr-big {
   font-family: var(--font-voice);
   font-size: 3.5rem;
   font-weight: 600;
@@ -979,8 +1042,7 @@ kbd .arrow {
   text-align: right;
   min-width: 4.2ch;
 }
-.rr-ci,
-.lr-ci {
+.rr-ci {
   white-space: nowrap;
   font-family: var(--font-data);
   font-weight: 500;
@@ -1019,26 +1081,154 @@ kbd .arrow {
   background: var(--fair);
   color: var(--on-fair);
 }
-.length-card {
+/* Not enough data: no colour of its own, just an outline (the prompt in the sub-line says what to do). */
+.verdict.unclear {
+  border: var(--border-control) solid var(--c-text);
+  padding: calc(0.1em - 2px) calc(0.6em - 2px);
+}
+/* How it plays: current rules against the baseline (simulation only). */
+.feel-card {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   min-height: 0;
 }
-.length-readout .lr-big {
-  font-size: 2.5rem;
+.feel-table {
+  font-size: 1.25rem;
+  line-height: 1.3;
 }
-.length-readout .lr-name {
-  font-size: 1.5rem;
+.feel-table thead th {
+  font-size: 1rem;
 }
-.lr-row.muted > * {
+.feel-table td {
+  font-weight: 400;
+  padding-top: 0.45rem;
+  padding-bottom: 0.45rem;
+}
+.feel-table tbody td:first-child {
+  font-weight: 700;
+}
+.feel-table .num {
+  text-align: right;
+  font-family: var(--font-data);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.feel-note {
+  margin: 0.5rem 0 0;
+  font-size: 1rem;
   color: var(--c-text-muted);
-}
-.hist-host {
-  flex: 1 1 auto;
-  min-height: 8.75rem;
 }
 .tug-host {
   flex: 0 0 clamp(8rem, 21vh, 14rem);
+}
+
+/* ---------- ten playtests ---------- */
+.playtests-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.pt-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 0.625rem 1rem;
+}
+.pt-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.3rem;
+  padding: 0.375rem 0.75rem;
+  border-top: var(--border-control) solid var(--c-text);
+  background: var(--c-bg);
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.pt-card.is-empty {
+  border-top-color: var(--c-hairline);
+}
+.pt-card.is-dim {
+  opacity: 0.3;
+}
+.pt-card.is-wrong {
+  background: var(--c-bg-alt);
+}
+.pt-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+.pt-name {
+  font-weight: 700;
+  font-size: 1rem;
+}
+.pt-score {
+  font-family: var(--font-voice);
+  font-weight: 600;
+  font-size: 1.375rem;
+  font-variant-numeric: tabular-nums;
+}
+.pt-dots {
+  display: flex;
+  gap: 0.25rem;
+}
+.pt-dot {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%; /* game pieces: one per game won */
+}
+.pt-dot--p1 {
+  background: var(--p1);
+}
+.pt-dot--p2 {
+  background: var(--p2);
+}
+.pt-tag {
+  display: inline-block;
+  padding: 0.05em 0.5em;
+  font-weight: 700;
+  font-size: 0.9375rem;
+  border: var(--border-control) solid transparent;
+}
+.pt-tag--p1 {
+  background: var(--p1);
+  color: var(--on-p1);
+}
+.pt-tag--tie {
+  background: var(--fair);
+  color: var(--on-fair);
+}
+.pt-tag--p2 {
+  background: var(--p2);
+  color: var(--on-p2);
+}
+.pt-truth {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 3rem;
+  border-top: var(--border-control) solid var(--c-text);
+  padding-top: 0.625rem;
+}
+.pt-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+.pt-big {
+  font-family: var(--font-voice);
+  font-weight: 600;
+  font-size: 3rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.pt-label {
+  font-size: 1.25rem;
+  max-width: 22rem;
 }
 
 /* ---------- tablets, phones and short windows: one scrolling column ---------- */
@@ -1076,8 +1266,9 @@ kbd .arrow {
   .result-grid .race-readout {
     justify-content: start;
   }
-  .hist-host {
-    min-height: 15rem;
+  .pt-grid {
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    grid-auto-rows: auto;
   }
   .tug-host {
     flex-basis: 9rem;
@@ -1184,6 +1375,15 @@ kbd .arrow {
   }
   .verdict {
     font-size: 1.5rem;
+  }
+  .feel-table {
+    font-size: 1rem;
+  }
+  .pt-big {
+    font-size: 2.25rem;
+  }
+  .pt-label {
+    font-size: 1rem;
   }
   .footer {
     flex-direction: column;

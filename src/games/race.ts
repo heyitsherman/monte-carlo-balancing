@@ -26,6 +26,17 @@ export interface RaceOutcome {
   turns: number;
   /** True when maxTurns was hit (should never happen). */
   capped: boolean;
+  /**
+   * Times the lead passed from one player to the other. This and the next two describe how the
+   * game felt (simulation only, no closed form). The leader is read at the start, after every full
+   * round (both players have moved the same number of times, so moving first is not a lead) and at
+   * the finish, where the winner leads. Ties have no leader.
+   */
+  leadChanges: number;
+  /** The winner was behind at the halfway checkpoint. */
+  comeback: boolean;
+  /** The winner led at the halfway checkpoint and was never behind after it. */
+  decidedEarly: boolean;
 }
 
 export interface RaceAggregate {
@@ -37,6 +48,10 @@ export interface RaceAggregate {
   turnsSumSq: number;
   /** turnsHist[t] = games that lasted exactly t turns */
   turnsHist: number[];
+  leadChangesSum: number;
+  leadChangesSumSq: number;
+  comebacks: number;
+  decidedEarly: number;
 }
 
 export interface RaceExact {
@@ -62,6 +77,29 @@ export interface RaceEvent {
 /** Default track length, calibrated so baseline P1 win rate sits in 57–65% (see README). */
 export const DEFAULT_TRACK_LENGTH = 20;
 
+/** Leader at each checkpoint of the current game (reused buffer: 0 = tie, 1 or 2). */
+let checkpoints = new Int8Array(64);
+
+const leaderOf = (p1: number, p2: number): 0 | 1 | 2 => (p1 > p2 ? 1 : p2 > p1 ? 2 : 0);
+
+/** Lead changes, comeback and early decision from the checkpoint leaders (the last one is the winner). */
+function feel(count: number, winner: 1 | 2): Pick<RaceOutcome, 'leadChanges' | 'comeback' | 'decidedEarly'> {
+  let leadChanges = 0;
+  let last = 0;
+  for (let i = 0; i < count; i++) {
+    const l = checkpoints[i];
+    if (l !== 0 && last !== 0 && l !== last) leadChanges++;
+    if (l !== 0) last = l;
+  }
+  // Checkpoint 0 is the start and the last is the finish; halfway is the middle round.
+  const half = Math.floor((count - 1) / 2);
+  const atHalf = checkpoints[half];
+  const loser = winner === 1 ? 2 : 1;
+  let behindLater = false;
+  for (let i = half + 1; i < count; i++) if (checkpoints[i] === loser) behindLater = true;
+  return { leadChanges, comeback: atHalf === loser, decidedEarly: atHalf === winner && !behindLater };
+}
+
 /**
  * Play one game. `log`, when given, receives every turn (used to animate step 1).
  * Logging does not change RNG consumption, so logged and silent games agree.
@@ -70,6 +108,10 @@ export function playRace(c: RaceConfig, rng: Rng, log?: (e: RaceEvent) => void):
   let p1 = 0;
   let p2 = c.p2HeadStart;
   let p2Bonus = c.p2FirstRollBonus;
+  const need = (c.maxTurns >> 1) + 3;
+  if (checkpoints.length < need) checkpoints = new Int8Array(need);
+  checkpoints[0] = leaderOf(p1, p2);
+  let count = 1;
   for (let t = 0; t < c.maxTurns; t++) {
     const isP1 = (t & 1) === 0;
     const mine = isP1 ? p1 : p2;
@@ -101,9 +143,15 @@ export function playRace(c: RaceConfig, rng: Rng, log?: (e: RaceEvent) => void):
         positions: [p1, p2],
       });
     }
-    if (pos >= c.trackLength) return { winner: isP1 ? 1 : 2, turns: t + 1, capped: false };
+    if (pos >= c.trackLength) {
+      const winner = isP1 ? 1 : 2;
+      checkpoints[count++] = winner;
+      return { winner, turns: t + 1, capped: false, ...feel(count, winner) };
+    }
+    if (!isP1) checkpoints[count++] = leaderOf(p1, p2); // a full round is complete
   }
-  return { winner: p1 >= p2 ? 1 : 2, turns: c.maxTurns, capped: true };
+  const winner = p1 >= p2 ? 1 : 2;
+  return { winner, turns: c.maxTurns, capped: true, ...feel(count, winner) };
 }
 
 /**
@@ -213,9 +261,25 @@ export const race: Game<RaceConfig, RaceOutcome, RaceAggregate, RaceExact | null
       read: (a) => ({ kind: 'distribution', hist: a.turnsHist }),
       exact: (e) => (e ? e.lengthDist : null),
     },
+    // How the game feels: simulation only.
+    {
+      id: 'leadChanges', label: 'Lead changes', kind: 'mean', unit: 'per game',
+      read: (a) => ({ kind: 'mean', sum: a.leadChangesSum, sumSq: a.leadChangesSumSq, n: a.n }),
+    },
+    {
+      id: 'comeback', label: 'Comebacks: the winner was behind at halfway', kind: 'proportion',
+      read: (a) => ({ kind: 'proportion', k: a.comebacks, n: a.n }),
+    },
+    {
+      id: 'decidedEarly', label: 'Decided early: the winner led from halfway on', kind: 'proportion',
+      read: (a) => ({ kind: 'proportion', k: a.decidedEarly, n: a.n }),
+    },
   ],
   simulate: (config, rng) => playRace(config, rng),
-  emptyAggregate: () => ({ n: 0, p1Wins: 0, p2Wins: 0, capHits: 0, turnsSum: 0, turnsSumSq: 0, turnsHist: [] }),
+  emptyAggregate: () => ({
+    n: 0, p1Wins: 0, p2Wins: 0, capHits: 0, turnsSum: 0, turnsSumSq: 0, turnsHist: [],
+    leadChangesSum: 0, leadChangesSumSq: 0, comebacks: 0, decidedEarly: 0,
+  }),
   accumulate(agg, o) {
     agg.n++;
     if (o.winner === 1) agg.p1Wins++;
@@ -224,6 +288,10 @@ export const race: Game<RaceConfig, RaceOutcome, RaceAggregate, RaceExact | null
     agg.turnsSum += o.turns;
     agg.turnsSumSq += o.turns * o.turns;
     histAdd(agg.turnsHist, o.turns);
+    agg.leadChangesSum += o.leadChanges;
+    agg.leadChangesSumSq += o.leadChanges * o.leadChanges;
+    if (o.comeback) agg.comebacks++;
+    if (o.decidedEarly) agg.decidedEarly++;
     return agg;
   },
   exact: (config) => (config.catchUp ? null : exactRace(config)),

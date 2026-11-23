@@ -9,7 +9,15 @@ export interface TugData {
   exact: number;
   /** a reference P1 rate to compare against (e.g. baseline), NaN for none */
   ghost: number;
+  /** The target band for P1's share, e.g. 0.47–0.53, and its name ("Fair"). */
+  bandLo: number;
+  bandHi: number;
+  bandName: string;
+  /** The band edge the CI crosses ("not enough data"), highlighted; NaN for none. */
+  crossed: number;
 }
+
+const pctEdge = (x: number) => `${Math.round(x * 1000) / 10}`;
 
 /**
  * Horizontal "tug of war" bar: P1's share in blue from the left, P2's in orange from the right.
@@ -23,6 +31,8 @@ export function renderTug(d: TugData, w: number, h: number): string {
   const barBot = barTop + barH;
   const x = linear(0, 1, m.l, w - m.r);
   let s = svgOpen(w, h, 'Share of games won by Player 1 versus Player 2, with 95% confidence interval');
+  // The target band shows above and below the bar; its edges run through it.
+  s += `<rect x="${x(d.bandLo)}" y="${barTop - 14 * fs}" width="${x(d.bandHi) - x(d.bandLo)}" height="${barH + 28 * fs}" class="target-band"/>`;
   if (Number.isFinite(d.p)) {
     const bx = x(d.p);
     s += `<rect x="${x(0)}" y="${barTop}" width="${bx - x(0)}" height="${barH}" fill="var(--p1)" class="tug"/>`;
@@ -34,9 +44,13 @@ export function renderTug(d: TugData, w: number, h: number): string {
   } else {
     s += `<rect x="${x(0)}" y="${barTop}" width="${x(1) - x(0)}" height="${barH}" class="tug-empty"/>`;
   }
-  // fair line
-  s += line(x(0.5), barTop - 16 * fs, x(0.5), barBot + 16 * fs, 'fair');
-  s += text(x(0.5), barTop - 22 * fs, '50% = fair', 'fair-label');
+  for (const e of [d.bandLo, d.bandHi]) {
+    s += line(x(e), barTop - 14 * fs, x(e), barBot + 14 * fs, e === d.crossed ? 'band-edge crossed' : 'band-edge');
+  }
+  s += text(x((d.bandLo + d.bandHi) / 2), barTop - 22 * fs, `${d.bandName}: ${pctEdge(d.bandLo)}–${pctEdge(d.bandHi)}%`, 'fair-label');
+  if (Number.isFinite(d.crossed)) {
+    s += text(x(d.crossed), barBot + 50 * fs, `${pctEdge(d.crossed)}%`, 'crossed-label');
+  }
   if (Number.isFinite(d.exact)) {
     s += line(x(d.exact), barTop - 6 * fs, x(d.exact), barBot + 6 * fs, 'exact');
   }
