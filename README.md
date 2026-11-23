@@ -6,6 +6,8 @@ A presenter-driven browser demo that explains **Monte Carlo simulation as a game
 
 **Live demo:** https://heyitsherman.github.io/monte-carlo-balancing/
 
+**Roadmap:** [docs/PLAN.md](docs/PLAN.md) — turning the talk into a modular teaching kit.
+
 ---
 
 ## How to present
@@ -22,22 +24,22 @@ Open the page full-screen (F11) on the projector. Everything is keyboard-driven;
 | `+` / `−` (also `↑` / `↓`) | Adjust the active slider / toggle (race chapter) |
 | `1` – `4` | Jump to chapter 1 (Title), 2 (Dice Duel), 3 (First-Player Problem), 4 (Closing) |
 | `T` | Toggle light / dark theme |
-| `Esc` | Help overlay with these keys |
+| `Esc` | Help overlay with these keys (any key or click closes it) |
 
 Mouse/touch: buttons in the footer (◀ ▶ R F ?), plus the slider and toggles in the race chapter.
 
-**Deep links for rehearsal:** `#<chapter>.<step>`, both 1-based — e.g. `…/monte-carlo-balancing/#3.4` opens the head-start sweep. Without a hash, the app reopens the last chapter you were on (stored in `localStorage`).
+**Deep links for rehearsal:** `#<chapter>.<step>`, both 1-based — e.g. `…/monte-carlo-balancing/#3.4` opens the head-start sweep. Without a hash, the app always opens on the title.
 
 ### Run of show (≈ 5 min)
 
-Numbers are screen.step as used by deep links and the footer (the PRD's Chapters 0–3 are screens 1–4).
+Numbers are screen.step as used by deep links and the footer.
 
 | # | Caption | What happens |
 | --- | --- | --- |
 | 1 | Run it 10,000 times | Title + core message |
 | 2.1 | *Attacker rolls 3 dice, defender rolls 2. Who wins?* | One battle with dice faces and pairwise comparisons. `R` rolls another. |
 | 2.2–2.5 | *10 battles. / 100. / 1,000. / 10,000.* | Bar chart with 95% CI whiskers that visibly shrink (sub-line states the margin) |
-| 2.6 | *Now the exact math.* | Exact-value markers (dashed) land inside the whiskers |
+| 2.6 | *Now the exact math.* | Exact-value markers (dashed) fade in, then the axis zooms in and the bars become dots, so you can see each exact line fall inside its whisker |
 | 2.7 | *Noise becomes signal.* | Running estimate vs N (log axis, 1 → 100,000) with CI band and exact line |
 | 3.1 | *A simple race…* | One animated game on the track |
 | 3.2 | *Is it fair? Play it 10,000 times.* | Streams 1 → 10,000 games; verdict **Favors P1** |
@@ -88,6 +90,7 @@ npm test           # Vitest: RNG, stats, exact-vs-simulation, calibration band, 
 npm run build      # type-check + production build into dist/
 npm run preview    # serve dist/ under the Pages subpath
 npm run calibrate  # print the calibration table and the README numbers
+npm run bench      # speed check against time budgets (kept out of CI: timing is flaky on shared runners)
 ```
 
 ### Deploy
@@ -116,7 +119,8 @@ src/
     charts/       hand-written SVG: bars + whiskers, convergence band, tug-of-war, sweep, histogram, dice
     chapters/     one file per chapter (bookends.ts holds Title and Closing)
   main.ts
-tests/            Vitest suites (+ calibrate.test.ts, a report rather than assertions)
+tests/            Vitest suites (assertions only)
+scripts/          calibrate.ts (README numbers) and benchmark.ts, run with vite-node
 ```
 
 The RNG stream for a run is derived from `(seed, gameId, config)`. Consequences: Show and Fast modes produce identical final numbers; going back to a config reproduces its numbers exactly; and a sweep cell equals the standalone run of the same config (head start 0 in the sweep *is* the baseline).
@@ -145,17 +149,18 @@ returns a row-major grid with `.at(i, j)`. A heatmap chapter needs only a new ch
 ## Decisions
 
 - **Track length 20.** Exact baseline P1 win rate 61.89% (inside the 57–65% band, ~12 CIs from 50% at n = 10,000). Round, and 21 squares fit legibly on a projector.
-- **Fix #2 is mathematically identical to a 1-square head start.** Without catch-up, the players never interact, so "+1 on the first roll" just shifts every later position by 1. The exact values are equal (55.30%), and the step's sub-line says so. That is a useful lesson: different-looking rules can be the same rule. The PRD's step stays as written.
-- **No integer head start is fair** (1 → 55.3%, 2 → 48.4%). The sweep step shows the PRD's conditional sub-line. Catch-up gets closer (55.7%) but still favors P1 at n = 10,000. The caption says "Fairer", not "fair", and the screen shows the true verdict.
+- **Fix #2 is mathematically identical to a 1-square head start.** Without catch-up, the players never interact, so "+1 on the first roll" just shifts every later position by 1. The exact values are equal (55.30%), and the step's sub-line says so. That is a useful lesson: different-looking rules can be the same rule, so the step stays in.
+- **No integer head start is fair** (1 → 55.3%, 2 → 48.4%). The sweep step's sub-line says so: change the rule, not the number. Catch-up gets closer (55.7%) but still favors P1 at n = 10,000. The caption says "Fairer", not "fair", and the screen shows the true verdict.
 - **Game length** counts both players' turns (P1 winning on their 5th move = 9 turns).
 - **"± x pp"** is the half-width of the Wilson interval, which is slightly asymmetric; the whiskers and bands draw the true asymmetric bounds. Mean game length gets a normal-approximation 95% CI, so it also shows ± and n.
 - **Dice Duel runs from one 100,000-battle stream.** Steps 10 / 100 / 1,000 / 10,000 show cumulative snapshots of the same stream, so the bars at 10,000 are the first 10,000 battles of the convergence chart.
-- **Show vs Fast.** The mode is global (default Show, toggled with `F`) and applies to step entry and `R`. Slider/toggle changes in the race chapter always run Fast, per the PRD. Going backwards always renders instantly. Show-mode pacing happens on the main thread over checkpoint snapshots from the worker, so the worker never sleeps.
+- **Show vs Fast.** The mode is global (default Show, toggled with `F`) and applies to step entry and `R`. Slider/toggle changes in the race chapter always run Fast. Going backwards always renders instantly. Show-mode pacing happens on the main thread over checkpoint snapshots from the worker, so the worker never sleeps.
+- **Step 2.6 zooms in.** On a 0–100% axis the ±0.9 pp whiskers and the exact lines merge into one smudge. The axis zooms to the data instead, and the bars fade into dots on the way, because bars cut off at a non-zero baseline would exaggerate the differences.
 - **Single illustrative games** (the one battle in 2.1, the one race in 3.1) are simulated on the main thread: one game takes microseconds. All bulk simulation and `exact()` calls run in the worker.
-- **Keys `1`–`4` map to the four screens in order** (Title, Dice Duel, Race, Closing). The footer numbers chapters the same way (`2/4 Dice Duel`), which avoids the PRD's 0-based chapter numbering clashing with the keys. Added extras: `PgUp`/`PgDn` (clickers), `↑`/`↓` as aliases for `+`/`−`, `T` for theme, and deep links.
+- **Keys `1`–`4` map to the four screens in order** (Title, Dice Duel, Race, Closing). The footer numbers chapters the same way (`2/4 Dice Duel`), so the keys and the footer always agree. Added extras: `PgUp`/`PgDn` (clickers), `↑`/`↓` as aliases for `+`/`−`, `T` for theme, and deep links.
 - **Reseed** cancels in-flight work by terminating and recreating the worker.
 - **"Games simulated"** in the footer is the session total, a nice live counter for the audience.
-- **Phones:** below 760 px wide the layout scrolls and readouts shrink below the projector minimums (readable, not polished, per the PRD).
+- **Phones:** below 760 px wide the layout scrolls and readouts shrink below the projector minimums (readable, not polished: the projector is the primary screen).
 - **Fonts:** system font stack (Segoe UI on Windows), so there is no network dependency at all.
 - **Tooling:** Vite 6, TypeScript 5 (strict), Vitest 3.
 

@@ -32,12 +32,6 @@ describe('Dice Duel', () => {
       expect(Math.abs(agg[o] / agg.n - e[o].p) * 100).toBeLessThan(0.3);
     }
   });
-
-  test('100,000 battles run in well under 300 ms', () => {
-    const t0 = performance.now();
-    runSync('diceDuel', diceDuel.defaultConfig, 100_000, SEED);
-    expect(performance.now() - t0).toBeLessThan(300);
-  });
 });
 
 describe('Race', () => {
@@ -101,11 +95,5 @@ describe('Race', () => {
     expect(a).toEqual(b);
     expect(events).toHaveLength(a.turns);
     expect(events[0].player).toBe(1);
-  });
-
-  test('10,000 race games run in well under 300 ms', () => {
-    const t0 = performance.now();
-    runSync('race', base, 10_000, SEED);
-    expect(performance.now() - t0).toBeLessThan(300);
   });
 });

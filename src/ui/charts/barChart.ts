@@ -18,7 +18,19 @@ export interface BarChartData {
   n: number;
   /** 0 → hidden, 1 → exact markers fully shown (tweenable) */
   exactAlpha: number;
+  /** y-axis range (tweenable). Bars need yMin = 0; zoom in with `zoom`. */
+  yMin: number;
   yMax: number;
+  /**
+   * 0 → bars from 0%, 1 → dots on a zoomed axis (tweenable). Bars cut off at a non-zero
+   * baseline would exaggerate differences, so they fade into dots as the axis zooms.
+   */
+  zoom: number;
+}
+
+/** Gridline step that keeps roughly 3–8 lines on screen for a y-range. */
+function tickStep(range: number): number {
+  return range > 0.6 ? 0.2 : range > 0.3 ? 0.1 : range > 0.12 ? 0.05 : 0.02;
 }
 
 const READOUT_H = 150;
@@ -30,22 +42,30 @@ export function renderBarChart(d: BarChartData, w: number, h: number): string {
   const ch = Math.max(120, h - readoutH);
   const m = { l: 80 * fs, r: 30 * fs, t: 24 * fs, b: 56 * fs };
   const pw = w - m.l - m.r;
-  const y = linear(0, d.yMax, ch - m.b, m.t);
+  const y = linear(d.yMin, d.yMax, ch - m.b, m.t);
+  const clampY = (v: number) => y(Math.min(d.yMax, Math.max(d.yMin, v)));
   const band = pw / d.bars.length;
   const bw = Math.min(band * 0.42, 260);
+  const barAlpha = 1 - d.zoom;
 
   let s = svgOpen(w, ch, 'Bar chart of outcome frequencies with 95% confidence intervals');
   s += `<g style="--fs:${fs}">`;
-  for (let v = 0; v <= d.yMax + 1e-9; v += 0.2) {
-    s += line(m.l, y(v), w - m.r, y(v), v === 0 ? 'axis' : 'grid');
+  const step = tickStep(d.yMax - d.yMin);
+  for (let i = Math.ceil(d.yMin / step - 1e-9); i * step <= d.yMax + 1e-9; i++) {
+    const v = i * step;
+    s += line(m.l, y(v), w - m.r, y(v), i === 0 ? 'axis' : 'grid');
     s += text(m.l - 12 * fs, y(v) + 7 * fs, `${Math.round(v * 100)}%`, 'tick', 'end');
+  }
+  if (d.zoom > 0.01) {
+    s += line(m.l, y(d.yMin), w - m.r, y(d.yMin), 'axis', `opacity="${d.zoom}"`);
+    s += text(w - m.r, m.t - 4 * fs, 'Zoomed in: dots are the simulated values', 'axis-title', 'end', `opacity="${d.zoom}"`);
   }
   d.bars.forEach((b, i) => {
     const cx = m.l + band * (i + 0.5);
-    if (Number.isFinite(b.p)) {
-      const top = y(b.p);
-      s += `<rect x="${cx - bw / 2}" y="${top}" width="${bw}" height="${Math.max(0, y(0) - top)}" rx="4" fill="${b.color}" class="bar"/>`;
-      s += vWhisker(cx, y(b.lo), y(b.hi), bw * 0.18);
+    const hasP = Number.isFinite(b.p);
+    if (hasP && barAlpha > 0.01) {
+      const top = clampY(b.p);
+      s += `<rect x="${cx - bw / 2}" y="${top}" width="${bw}" height="${Math.max(0, y(d.yMin) - top)}" rx="4" fill="${b.color}" class="bar" opacity="${barAlpha}"/>`;
     }
     if (d.exactAlpha > 0.01 && Number.isFinite(b.exact)) {
       const ey = y(b.exact);
@@ -54,6 +74,12 @@ export function renderBarChart(d: BarChartData, w: number, h: number): string {
       s += line(cx - half, ey, cx + half, ey, 'exact');
       s += text(cx + half + 8 * fs, ey + 7 * fs, 'exact', 'exact-label', 'start');
       s += `</g>`;
+    }
+    if (hasP) {
+      s += vWhisker(cx, clampY(b.lo), clampY(b.hi), bw * 0.18);
+      if (d.zoom > 0.01) {
+        s += `<circle cx="${cx}" cy="${clampY(b.p)}" r="${11 * fs}" fill="${b.color}" class="dot" opacity="${d.zoom}"/>`;
+      }
     }
     // Wrap long category labels onto two lines when the band is narrow (phones).
     const words = b.label.split(' ');

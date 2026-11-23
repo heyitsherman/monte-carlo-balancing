@@ -44,7 +44,10 @@ export class DiceDuelChapter implements Chapter {
     { caption: '100.' },
     { caption: '1,000.' },
     { caption: '10,000.' },
-    { caption: 'Now the exact math.', sub: 'Dashed lines: exact odds from all 6⁵ = 7,776 possible rolls.' },
+    {
+      caption: 'Now the exact math.',
+      sub: 'Dashed lines: exact odds from all 6⁵ = 7,776 possible rolls. Zoom in: do they fall inside the whiskers?',
+    },
     {
       caption: 'Noise becomes signal.',
       sub: 'Simulation agrees with the math. When the math is too ugly to do, you run the simulation instead.',
@@ -190,17 +193,26 @@ export class DiceDuelChapter implements Chapter {
 
   // ---- steps 1–5: bars ----------------------------------------------------
 
-  private barData(agg: DuelAggregate | undefined, exact: DuelExact | undefined, exactAlpha: number): BarChartData {
+  /** `zoom` 0 → bars on 0–100%; 1 → dots on an axis just wide enough for every whisker and exact line. */
+  private barData(
+    agg: DuelAggregate | undefined,
+    exact: DuelExact | undefined,
+    exactAlpha: number,
+    zoom = 0,
+  ): BarChartData {
     const n = agg?.n ?? 0;
-    return {
-      n,
-      exactAlpha,
-      yMax: 1,
-      bars: DUEL_OUTCOMES.map((o) => {
-        const w = wilson(agg ? agg[o] : 0, n);
-        return { label: LABELS[o], color: COLORS[o], p: w.p, lo: w.lo, hi: w.hi, exact: exact ? exact[o].p : NaN };
-      }),
-    };
+    const bars = DUEL_OUTCOMES.map((o) => {
+      const w = wilson(agg ? agg[o] : 0, n);
+      return { label: LABELS[o], color: COLORS[o], p: w.p, lo: w.lo, hi: w.hi, exact: exact ? exact[o].p : NaN };
+    });
+    let zMin = 0;
+    let zMax = 1;
+    if (zoom > 0 && n > 0) {
+      const vals = bars.flatMap((b) => [b.lo, b.hi, b.exact]).filter(Number.isFinite);
+      zMin = Math.max(0, Math.floor((Math.min(...vals) - 0.02) / 0.05) * 0.05);
+      zMax = Math.min(1, Math.ceil((Math.max(...vals) + 0.02) / 0.05) * 0.05);
+    }
+    return { n, exactAlpha, zoom, yMin: zoom * zMin, yMax: 1 + zoom * (zMax - 1), bars };
   }
 
   private marginSub(agg: DuelAggregate): string {
@@ -217,10 +229,10 @@ export class DiceDuelChapter implements Chapter {
     const [snaps, exact] = await Promise.all([this.getTrace(), this.getExact()]);
     if (!ctx.alive(epoch)) return;
 
-    const setN = async (n: number, ms: number, alpha: number) => {
+    const setN = async (n: number, ms: number, alpha: number, zoom = 0) => {
       const agg = snaps.get(n)!;
       if (step < 5) ctx.setSub(this.marginSub(agg));
-      await this.bars.set(this.barData(agg, exact, alpha), ms);
+      await this.bars.set(this.barData(agg, exact, alpha, zoom), ms);
     };
 
     if (info.animate && info.direction === 'rerun' && !showExact) {
@@ -230,11 +242,15 @@ export class DiceDuelChapter implements Chapter {
         if (!(await ctx.wait(700, epoch))) return;
       }
     } else if (info.animate && showExact) {
-      await setN(target, 0, prevStep === 5 ? 1 : 0);
+      // Exact lines fade in on the familiar 0–100% bars, then the axis zooms in so the
+      // whiskers are big enough to see whether each exact line falls inside them.
+      if (prevStep === 5) await setN(target, 0, 0, 0);
       if (!(await ctx.wait(300, epoch))) return;
-      await setN(target, 900, 1);
+      await setN(target, 900, 1, 0);
+      if (!(await ctx.wait(600, epoch))) return;
+      await setN(target, 1100, 1, 1);
     } else {
-      await setN(target, info.animate ? 700 : 0, showExact ? 1 : 0);
+      await setN(target, info.animate ? 700 : 0, showExact ? 1 : 0, showExact ? 1 : 0);
     }
   }
 

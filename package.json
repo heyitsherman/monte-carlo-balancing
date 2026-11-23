@@ -10,11 +10,13 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "calibrate": "vitest run tests/calibrate.test.ts"
+    "calibrate": "vite-node scripts/calibrate.ts",
+    "bench": "vite-node scripts/benchmark.ts"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
     "vite": "^6.0.7",
+    "vite-node": "^3.2.4",
     "vitest": "^3.2.7"
   }
 }

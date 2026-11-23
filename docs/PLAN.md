@@ -42,7 +42,7 @@ Turn "Run it 10,000 times" from a fixed 5-minute talk into a modular kit for tea
 |---|---|---|
 | 0.1 | Step 2.6: zoom the bar chart's y-axis (tweened) so the whiskers and the exact lines can be told apart on a projector. At 0–100% they merge into one smudge. | `src/ui/charts/barChart.ts`, `src/ui/chapters/diceDuel.ts` |
 | 0.2 | A key that closes the help overlay must not also act (→ currently advances the slide) | `src/ui/presenter.ts:250` |
-| 0.3 | Reproduce and fix the 4 console errors seen while jumping between deep links (#2.5 → #3.2 → #3.6 → #3.4 → #2.6) | to be found |
+| 0.3 | Reproduce and fix the 4 console errors seen while jumping between deep links (#2.5 → #3.2 → #3.6 → #3.4 → #2.6). **Result:** not an app bug. They were Vite's dev-server WebSocket reconnect attempts, logged because the dev server was stopped while the page was open (reproduced exactly). Deep links, rapid keyboard navigation, reseeds, resizes and the production build all run with a clean console. | none |
 | 0.4 | Stop the two timing assertions (< 300 ms) from blocking deploys on slow CI runners: move them to a benchmark script | `tests/games.test.ts:39`, `:109` |
 | 0.5 | Turn the calibration report into a script, so `npm test` only runs real assertions. `npm run calibrate` stays. | `tests/calibrate.test.ts` → `scripts/` |
 | 0.6 | README: remove the references to "the PRD" | `README.md` |

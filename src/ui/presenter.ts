@@ -5,7 +5,6 @@ import type { AppContext, Chapter, EnterInfo, Mode } from './types';
 import { el, esc } from './util';
 
 export const DEFAULT_SEED = 'dgt-balance';
-const STORAGE_KEY = 'mcb:last-chapter';
 
 const KEYS: [string, string][] = [
   ['→  Space  PgDn', 'Next step'],
@@ -18,21 +17,6 @@ const KEYS: [string, string][] = [
   ['T', 'Toggle light / dark theme'],
   ['Esc', 'Show / hide this help'],
 ];
-
-function storageGet(key: string): string | null {
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-function storageSet(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    /* private mode etc. — not important */
-  }
-}
 
 /**
  * Chapter/step state machine, keyboard control, caption, footer and help overlay.
@@ -115,7 +99,7 @@ export class Presenter {
     this.help = el('div', { class: 'help', role: 'dialog', 'aria-label': 'Keyboard shortcuts' });
     this.help.innerHTML = `<div class="help-card"><h3>Keys</h3><dl>${KEYS.map(
       ([k, d]) => `<dt>${esc(k)}</dt><dd>${esc(d)}</dd>`,
-    ).join('')}</dl><p>Mouse/touch: use the buttons bottom-right. Esc to close.</p></div>`;
+    ).join('')}</dl><p>Mouse/touch: use the buttons bottom-right. Any key or click closes this.</p></div>`;
     this.help.hidden = true;
     this.help.addEventListener('click', () => this.toggleHelp());
     root.append(this.captionEl, this.subEl, stageWrap, this.footnote, footer, this.progressEl, this.help);
@@ -124,12 +108,8 @@ export class Presenter {
     window.addEventListener('keydown', (e) => this.onKey(e));
 
     window.addEventListener('hashchange', () => this.followHash());
-    // A deep link wins over the remembered chapter.
-    if (!this.followHash()) {
-      const saved = Number(storageGet(STORAGE_KEY));
-      const start = Number.isInteger(saved) && saved >= 0 && saved < chapters.length ? saved : 0;
-      this.go(start, 0, { direction: 'jump', animate: false });
-    }
+    // Always open on the title unless a deep link says otherwise.
+    if (!this.followHash()) this.go(0, 0, { direction: 'jump', animate: false });
   }
 
   /** Deep link `#<chapter>.<step>`, both 1-based (e.g. `#3.4`). Returns false if the hash is not one. */
@@ -150,7 +130,6 @@ export class Presenter {
     this.si = si;
     this.subOverride = null;
     this.stages.forEach((s, i) => (s.hidden = i !== ci));
-    storageSet(STORAGE_KEY, String(ci));
     const ch = this.chapters[ci];
     const step = ch.steps[si];
     this.captionEl.textContent = step.caption;
@@ -246,8 +225,13 @@ export class Presenter {
     }
     const k = e.key;
     const ch = this.chapters[this.ci];
+    // While help is open, any key just closes it (and does nothing else).
+    if (!this.help.hidden) {
+      this.toggleHelp();
+      e.preventDefault();
+      return;
+    }
     let handled = true;
-    if (!this.help.hidden && k !== 'Escape') this.toggleHelp();
     switch (k) {
       case 'ArrowRight':
       case ' ':

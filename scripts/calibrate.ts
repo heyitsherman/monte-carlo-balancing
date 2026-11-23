@@ -1,14 +1,15 @@
 /**
- * Calibration report (not an assertion suite): prints exact P1 win rates for the race
- * across track lengths and head starts. Run with `npm run calibrate`.
+ * Calibration report (prints, asserts nothing): exact P1 win rates for the race across
+ * track lengths and head starts, then the measured numbers quoted in the README.
+ * Run with `npm run calibrate`.
  */
-import { test } from 'vitest';
 import { runSync } from '../src/core/engine';
 import { formatProportion, meanCI, verdict, wilson } from '../src/core/stats';
 import { DUEL_OUTCOMES, diceDuel, exactDuel, type DuelAggregate } from '../src/games/diceDuel';
 import { exactRace, race, type RaceAggregate } from '../src/games/race';
 
-test('race calibration table', () => {
+// ---- race calibration table ----
+{
   const base = race.defaultConfig;
   const rows: string[] = [];
   rows.push('len | baseline | hs1 | hs2 | hs3 | hs4 | bonus+1 | meanTurns');
@@ -29,9 +30,10 @@ test('race calibration table', () => {
     );
   }
   console.log(rows.join('\n'));
-});
+}
 
-test('measured numbers for the README (default seed)', () => {
+// ---- measured numbers for the README (default seed) ----
+{
   const seed = 'dgt-balance';
   const out: string[] = [];
   const duel = exactDuel(diceDuel.defaultConfig);
@@ -59,4 +61,4 @@ test('measured numbers for the README (default seed)', () => {
     );
   }
   console.log(out.join('\n'));
-});
+}
