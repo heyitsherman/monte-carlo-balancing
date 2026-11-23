@@ -15,6 +15,11 @@ export interface TugData {
   bandName: string;
   /** The band edge the CI crosses ("not enough data"), highlighted; NaN for none. */
   crossed: number;
+  /** Names inside the bar (default "P1" and "P2"). */
+  leftName?: string;
+  rightName?: string;
+  /** Band caption (default "<bandName>: lo–hi%"), e.g. when the target is about the right-hand side. */
+  bandText?: string;
 }
 
 const pctEdge = (x: number) => `${Math.round(x * 1000) / 10}`;
@@ -37,8 +42,8 @@ export function renderTug(d: TugData, w: number, h: number): string {
     const bx = x(d.p);
     s += `<rect x="${x(0)}" y="${barTop}" width="${bx - x(0)}" height="${barH}" fill="var(--p1)" class="tug"/>`;
     s += `<rect x="${bx}" y="${barTop}" width="${x(1) - bx}" height="${barH}" fill="var(--p2)" class="tug"/>`;
-    s += text(x(0) + 20 * fs, barTop + barH / 2 + 12 * fs, 'P1', 'tug-label tug-label--p1', 'start');
-    s += text(x(1) - 20 * fs, barTop + barH / 2 + 12 * fs, 'P2', 'tug-label tug-label--p2', 'end');
+    s += text(x(0) + 20 * fs, barTop + barH / 2 + 12 * fs, d.leftName ?? 'P1', 'tug-label tug-label--p1', 'start');
+    s += text(x(1) - 20 * fs, barTop + barH / 2 + 12 * fs, d.rightName ?? 'P2', 'tug-label tug-label--p2', 'end');
     // CI whisker straddling the boundary
     s += hWhisker(x(d.lo), x(d.hi), barTop + barH / 2, barH * 0.3);
   } else {
@@ -47,7 +52,11 @@ export function renderTug(d: TugData, w: number, h: number): string {
   for (const e of [d.bandLo, d.bandHi]) {
     s += line(x(e), barTop - 14 * fs, x(e), barBot + 14 * fs, e === d.crossed ? 'band-edge crossed' : 'band-edge');
   }
-  s += text(x((d.bandLo + d.bandHi) / 2), barTop - 22 * fs, `${d.bandName}: ${pctEdge(d.bandLo)}–${pctEdge(d.bandHi)}%`, 'fair-label');
+  // Keep the caption inside the chart when the band sits at an end (e.g. 75–100%).
+  const mid = x((d.bandLo + d.bandHi) / 2);
+  const caption = d.bandText ?? `${d.bandName}: ${pctEdge(d.bandLo)}–${pctEdge(d.bandHi)}%`;
+  const half = caption.length * 5.5 * fs;
+  s += text(Math.min(Math.max(mid, m.l + half), w - m.r - half), barTop - 22 * fs, caption, 'fair-label');
   if (Number.isFinite(d.crossed)) {
     s += text(x(d.crossed), barBot + 50 * fs, `${pctEdge(d.crossed)}%`, 'crossed-label');
   }

@@ -1,10 +1,27 @@
 /**
  * Calibration report (prints, asserts nothing): exact P1 win rates for the race across
- * track lengths and head starts, then the measured numbers quoted in the README.
+ * track lengths and head starts, then the measured numbers quoted in the README, including
+ * the Phase 4 chapters (push your luck, loot, best-of-N, boss and handicap).
  * Run with `npm run calibrate`.
  */
 import { runSync } from '../src/core/engine';
-import { FAIR_TARGET, assess, formatProportion, meanCI, wilson } from '../src/core/stats';
+import {
+  BOSS_TARGET,
+  FAIR_TARGET,
+  HANDICAP_TARGET,
+  LOOT_TARGET,
+  SKILL_TARGET,
+  assess,
+  formatProportion,
+  histPercentile,
+  meanCI,
+  meanInterval,
+  wilson,
+} from '../src/core/stats';
+import { bestOf, exactBestOf, shortestSeries, type BestOfAggregate } from '../src/games/bestOf';
+import { boss, exactBoss, type BossAggregate } from '../src/games/boss';
+import { exactLoot, loot, type LootAggregate } from '../src/games/loot';
+import { pushLuck, turnExact, type LuckAggregate, type LuckConfig } from '../src/games/pushLuck';
 import { DUEL_OUTCOMES, diceDuel, exactDuel, type DuelAggregate } from '../src/games/diceDuel';
 import { exactRace, race, type RaceAggregate } from '../src/games/race';
 import { playtestGroups } from '../src/ui/chapters/playtests';
@@ -86,4 +103,82 @@ import { playtestGroups } from '../src/ui/chapters/playtests';
     `Playtests exact: P(looks fair) ${(tie * 100).toFixed(1)}%, P(P2 ahead) ${(below * 100).toFixed(1)}%, ` +
       `so ${((tie + below) * 20).toFixed(1)} of 20 groups get it wrong on average`,
   );
+}
+
+// ---- Phase 4 chapters (default seed, 10,000 runs each, as on screen) ----
+{
+  const seed = 'dgt-balance';
+  const N = 10_000;
+  const out: string[] = [];
+  const pct = (x: number, d = 1) => `${(x * 100).toFixed(d)}%`;
+
+  // Push your luck
+  const luckCfg = (c: Partial<LuckConfig>) => ({ ...pushLuck.defaultConfig, ...c });
+  for (const pr of pushLuck.presets!) {
+    const agg = runSync<LuckAggregate>('pushLuck', luckCfg(pr.config), N, seed);
+    const w = wilson(agg.aWins, agg.n);
+    out.push(`Push your luck, ${pr.label}: bot A ${formatProportion(w)} → ${assess(w, FAIR_TARGET).label}`);
+  }
+  const holds = [5, 10, 15, 20, 25, 30, 35, 40];
+  out.push(
+    'Push your luck, points per turn (sim, exact): ' +
+      holds
+        .map((h) => {
+          const agg = runSync<LuckAggregate>('pushLuck', luckCfg({ aHoldAt: h, bHoldAt: h }), N, seed);
+          const m = meanCI(agg.aPtsSum, agg.aPtsSumSq, agg.aTurns);
+          return `bank at ${h}: ${m.mean.toFixed(2)} ± ${m.margin.toFixed(2)} (${turnExact({ strategy: 'holdAt', holdAt: h, rolls: 1 }).perTurn.toFixed(2)})`;
+        })
+        .join(' | '),
+  );
+
+  // Loot
+  for (const pr of loot.presets!) {
+    const cfg = { ...loot.defaultConfig, ...pr.config };
+    const agg = runSync<LootAggregate>('loot', cfg, N, seed);
+    const m = meanCI(agg.sum, agg.sumSq, agg.n);
+    const e = exactLoot(cfg);
+    out.push(
+      `Loot, ${pr.label}: average ${m.mean.toFixed(2)} ± ${m.margin.toFixed(2)} (exact ${e.mean.toFixed(2)}) → ${assess(meanInterval(m), LOOT_TARGET).label}; ` +
+        `median ${histPercentile(agg.hist, 0.5)} (${e.median}), 1 in 10 ${histPercentile(agg.hist, 0.9)} (${e.p90}), 1 in 100 ${histPercentile(agg.hist, 0.99)} (${e.p99}), unluckiest ${agg.max}`,
+    );
+  }
+  for (const d of [3, 4, 5, 6]) {
+    const cfg = { ...loot.defaultConfig, dropPercent: d, pity: 40 };
+    const agg = runSync<LootAggregate>('loot', cfg, N, seed);
+    const m = meanCI(agg.sum, agg.sumSq, agg.n);
+    out.push(`Loot, ${d}% with pity at 40: average ${m.mean.toFixed(2)} ± ${m.margin.toFixed(2)} (exact ${exactLoot(cfg).mean.toFixed(2)}) → ${assess(meanInterval(m), LOOT_TARGET).label}`);
+  }
+
+  // Best-of-N
+  out.push(
+    'Best-of-N at 55% (sim, exact): ' +
+      [1, 3, 5, 7, 9, 15, 21, 31, 45, 61]
+        .map((n) => {
+          const agg = runSync<BestOfAggregate>('bestOf', { ...bestOf.defaultConfig, bestOf: n }, N, seed);
+          const w = wilson(agg.strongerWins, agg.n);
+          return `bo${n} ${pct(w.p)} ± ${w.marginPP.toFixed(1)} (${pct(exactBestOf({ ...bestOf.defaultConfig, bestOf: n }).strongerWin, 2)}) ${assess(w, SKILL_TARGET).label}`;
+        })
+        .join(' | '),
+  );
+  out.push(`Best-of-N: shortest series with 75% at a 55% edge: best-of-${shortestSeries(55, 0.75)}`);
+
+  // Boss
+  for (let b = 24; b <= 36; b++) {
+    const cfg = { ...boss.defaultConfig, bossHp: b };
+    const agg = runSync<BossAggregate>('boss', cfg, N, seed);
+    const w = wilson(agg.heroWins, agg.n);
+    out.push(
+      `Boss ${b} HP: hero wins ${formatProportion(w)} (exact ${pct(exactBoss(cfg).heroWin, 2)}) → ${assess(w, BOSS_TARGET).label} / fairness: ${assess(w, FAIR_TARGET).label}; ` +
+        `close wins ${pct(agg.closeWins / agg.n)}, rounds ${(agg.roundsSum / agg.n).toFixed(2)}`,
+    );
+  }
+
+  // Handicap: P2's share against 58% ± 3
+  for (let h = 0; h <= 6; h++) {
+    const cfg = { ...race.defaultConfig, p2HeadStart: h };
+    const agg = runSync<RaceAggregate>('race', cfg, N, seed);
+    const w = wilson(agg.p2Wins, agg.n);
+    out.push(`Handicap, head start ${h}: P2 ${formatProportion(w)} (exact ${pct(exactRace(cfg).p2Win, 2)}) → ${assess(w, HANDICAP_TARGET).label}`);
+  }
+  console.log(out.join('\n'));
 }

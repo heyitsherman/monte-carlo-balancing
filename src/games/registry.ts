@@ -1,4 +1,8 @@
+import { bestOf } from './bestOf';
+import { boss } from './boss';
 import { diceDuel } from './diceDuel';
+import { loot } from './loot';
+import { pushLuck } from './pushLuck';
 import { race } from './race';
 import type { AnyGame } from './types';
 
@@ -6,6 +10,10 @@ import type { AnyGame } from './types';
 export const games = {
   diceDuel,
   race,
+  pushLuck,
+  loot,
+  bestOf,
+  boss,
 } satisfies Record<string, AnyGame>;
 
 export type GameId = keyof typeof games;

@@ -28,6 +28,22 @@ export interface Game<C, O, A, E = unknown> {
   emptyAggregate(): A;
   accumulate(agg: A, o: O): A;
   exact?(config: C): E;
+  /**
+   * Rule sets that each teach one thing, for the Lab and the worksheet. `blurb` names the lesson in one
+   * line and must be true: a test checks that each preset moves the numbers the way its blurb says.
+   */
+  presets?: Preset<C>[];
+}
+
+export interface Preset<C> {
+  /** Stable, URL-safe id. */
+  id: string;
+  /** Short name, e.g. "Pity at 40". */
+  label: string;
+  /** The lesson in one line. */
+  blurb: string;
+  /** Changes on top of `defaultConfig`. */
+  config: Partial<C>;
 }
 
 /** A game with its type parameters erased, for registries and the worker. */
@@ -70,5 +86,5 @@ interface MetricBase<A, E> {
 
 export type MetricSpec<A, E = unknown> =
   | (MetricBase<A, E> & { kind: 'proportion'; /** Default design target, e.g. 50% ± 2 for fairness. */ target?: Target })
-  | (MetricBase<A, E> & { kind: 'mean'; unit: string })
+  | (MetricBase<A, E> & { kind: 'mean'; unit: string; /** Default design target for the mean. */ target?: Target })
   | (MetricBase<A, E> & { kind: 'distribution'; xLabel: string });

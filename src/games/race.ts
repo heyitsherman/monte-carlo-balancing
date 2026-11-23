@@ -295,4 +295,11 @@ export const race: Game<RaceConfig, RaceOutcome, RaceAggregate, RaceExact | null
     return agg;
   },
   exact: (config) => (config.catchUp ? null : exactRace(config)),
+  presets: [
+    { id: 'baseline', label: 'Baseline', blurb: 'Moving first wins about 62% of races: clearly favors Player 1.', config: {} },
+    { id: 'head-start-2', label: 'Head start 2', blurb: 'A 2-square head start for Player 2 lands inside the fair band.', config: { p2HeadStart: 2 } },
+    { id: 'first-roll-bonus', label: 'First-roll bonus', blurb: '+1 on Player 2’s first roll is the same math as a 1-square head start: still favors Player 1.', config: { p2FirstRollBonus: 1 } },
+    { id: 'catch-up', label: 'Catch-up', blurb: 'Catch-up barely changes who wins, but brings more comebacks and fewer early decisions.', config: { catchUp: true } },
+    { id: 'handicap', label: 'Handicap: head start 3', blurb: 'A 3-square head start is too far for fairness but right for a newer Player 2 aiming at 58%.', config: { p2HeadStart: 3 } },
+  ],
 };

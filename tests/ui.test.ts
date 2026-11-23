@@ -1,6 +1,18 @@
 import { describe, expect, test } from 'vitest';
 import { runSync } from '../src/core/engine';
-import { FAIR_TARGET, assess, wilson, type Proportion } from '../src/core/stats';
+import {
+  BOSS_TARGET,
+  FAIR_TARGET,
+  LOOT_TARGET,
+  SKILL_TARGET,
+  assess,
+  histPercentile,
+  meanInterval,
+  wilson,
+  type Proportion,
+} from '../src/core/stats';
+import { waitShares, waitYMax } from '../src/ui/charts/waitChart';
+import { matchPromptVariants } from '../src/ui/match';
 import { race, type RaceAggregate } from '../src/games/race';
 import { addingLabel, playBuildUp, replayLabel } from '../src/ui/buildUp';
 import { groupCall, playtestGroups } from '../src/ui/chapters/playtests';
@@ -156,5 +168,52 @@ describe('ten playtests', () => {
   test('the truth behind them reads "Favors P1"', () => {
     const agg = runSync<RaceAggregate>('race', race.defaultConfig, 10_000, 'dgt-balance');
     expect(assess(wilson(agg.p1Wins, agg.n), FAIR_TARGET).label).toBe('Favors P1');
+  });
+});
+
+describe('Phase 4 helpers', () => {
+  const prop = (p: number, lo: number, hi: number, n = 10_000): Proportion => ({ k: 0, n, p, lo, hi, marginPP: 0 });
+
+  test('prompts name what was simulated', () => {
+    const p = prop(0.745, 0.737, 0.754);
+    const a = assess(p, SKILL_TARGET);
+    expect(a.status).toBe('unclear');
+    expect(unclearPrompt(p, a, 'skill wins', 'series')).toBe(
+      'Too close to call. The likely range, 73.7–75.4%, crosses the edge of “skill wins” at 75%. More series shrink the range.',
+    );
+    const settled = prop(0.704, 0.701, 0.707, 100_000);
+    expect(resolvedLine(settled, assess(settled, BOSS_TARGET), 'fights')).toBe(
+      'On target. 100,000 fights: 70.1–70.7%, inside 67–73%. It took 10× more fights because the answer sits near the edge.',
+    );
+  });
+
+  test('every prompt variant is reserved, with the run-more button label', () => {
+    const v = matchPromptVariants(BOSS_TARGET, 'on target', 'fights');
+    expect(v).toHaveLength(6);
+    expect(v[0]).toContain('Run 100,000 fights (N)');
+    for (const label of ['Too hard', 'On target', 'Too easy']) expect(v.some((s) => s.startsWith(`${label}. 100,000 fights`))).toBe(true);
+  });
+
+  test('a mean can be assessed against a target band', () => {
+    const tuned = meanInterval({ mean: 20.17, margin: 0.27, n: 10_000 });
+    expect(assess(tuned, LOOT_TARGET).status).toBe('on');
+    expect(assess(meanInterval({ mean: 17.2, margin: 0.25, n: 10_000 }), LOOT_TARGET).label).toBe('Too generous');
+  });
+
+  test('wait chart shares: padded to the axis, with the tail counted', () => {
+    const { shares, over } = waitShares([0, 5, 3, 0, 2], 3);
+    expect(shares).toEqual([0, 0.5, 0.3, 0]);
+    expect(over).toBeCloseTo(0.2, 12);
+    // the pity try's spike is left out of the axis
+    expect(waitYMax([[0, 0.05, 0.04, 0.2]], 3)).toBeCloseTo(0.05, 12);
+    expect(waitYMax([[0, 0.051, 0.04, 0.2]], 3)).toBeCloseTo(0.06, 12);
+  });
+
+  test('percentiles: the unluckiest 1 in 100', () => {
+    const hist = [0, 50, 30, 10, 9, 1];
+    expect(histPercentile(hist, 0.5)).toBe(1);
+    expect(histPercentile(hist, 0.9)).toBe(3);
+    expect(histPercentile(hist, 0.99)).toBe(4);
+    expect(histPercentile([], 0.5)).toBeNaN();
   });
 });

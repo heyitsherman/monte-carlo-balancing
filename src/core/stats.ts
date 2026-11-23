@@ -30,9 +30,20 @@ export function wilson(k: number, n: number, z = Z95): Proportion {
   return { k, n, p, lo, hi, marginPP: ((hi - lo) / 2) * 100 };
 }
 
+/** An estimate with its 95% interval: a proportion, or a mean (e.g. average tries until a drop). */
+export interface Interval {
+  p: number;
+  lo: number;
+  hi: number;
+}
+
+/** A mean as an interval, so it can be assessed against a target like a proportion. */
+export const meanInterval = (m: MeanCI): Interval => ({ p: m.mean, lo: m.mean - m.margin, hi: m.mean + m.margin });
+
 /**
- * A design target for a proportion: "aim for `center`, anything within ± `tolerance` is fine".
- * Balanced means on target, and the target is a design decision, not always 50%.
+ * A design target for an estimate: "aim for `center`, anything within ± `tolerance` is fine".
+ * Balanced means on target, and the target is a design decision, not always 50%. Proportions use
+ * fractions (0.7 = 70%); means use their own unit (20 tries).
  */
 export interface Target {
   /** e.g. 0.5 for fairness, 0.7 for a boss you should usually beat */
@@ -70,7 +81,7 @@ export const NOT_ENOUGH_DATA = 'Not enough data: run more';
  * - below / above: the whole CI lies outside the band
  * - unclear: the CI crosses a band edge, so more runs are needed to tell
  */
-export function assess(prop: Proportion, target: Target): Assessment {
+export function assess(prop: Interval, target: Target): Assessment {
   const bandLo = target.center - target.tolerance;
   const bandHi = target.center + target.tolerance;
   const eps = 1e-12;
@@ -93,6 +104,34 @@ export const FAIR_TARGET: Target = {
   center: 0.5,
   tolerance: 0.03,
   labels: { below: 'Favors P2', on: 'Fair', above: 'Favors P1' },
+};
+
+/** A boss most players should beat on the first try: 70% ± 3 (plan D6). */
+export const BOSS_TARGET: Target = {
+  center: 0.7,
+  tolerance: 0.03,
+  labels: { below: 'Too hard', on: 'On target', above: 'Too easy' },
+};
+
+/** A handicap for the newer player: Player 2 wins 58% ± 3 (plan, Phase 4). */
+export const HANDICAP_TARGET: Target = {
+  center: 0.58,
+  tolerance: 0.03,
+  labels: { below: 'Not enough help', on: 'On target', above: 'Too much help' },
+};
+
+/** A match format where skill shows: the stronger player wins at least 75% (plan D11). One-sided, so the band runs to 100%. */
+export const SKILL_TARGET: Target = {
+  center: 0.875,
+  tolerance: 0.125,
+  labels: { below: 'Too much luck', on: 'Skill wins', above: 'Skill wins' },
+};
+
+/** A rare drop that keeps its designed average: 20 tries ± 1 (plan D11). */
+export const LOOT_TARGET: Target = {
+  center: 20,
+  tolerance: 1,
+  labels: { below: 'Too generous', on: 'On target', above: 'Too stingy' },
 };
 
 const intFmt = new Intl.NumberFormat('en-US');
@@ -138,6 +177,21 @@ export function histAdd(hist: number[], index: number, count = 1): void {
 export function histNormalize(hist: number[]): number[] {
   const total = hist.reduce((s, x) => s + x, 0);
   return total > 0 ? hist.map((x) => x / total) : hist.map(() => 0);
+}
+
+/**
+ * Smallest value k such that at least `q` of the mass is at or below k (e.g. q = 0.99: "99 players in 100
+ * needed k tries or fewer"). Works on counts and on probabilities. NaN when empty.
+ */
+export function histPercentile(hist: number[], q: number): number {
+  const total = hist.reduce((s, x) => s + x, 0);
+  if (total <= 0) return NaN;
+  let cum = 0;
+  for (let i = 0; i < hist.length; i++) {
+    cum += hist[i];
+    if (cum >= q * total - 1e-9 * total) return i;
+  }
+  return hist.length - 1;
 }
 
 export function histMean(hist: number[]): number {

@@ -596,6 +596,34 @@ kbd .arrow {
   stroke: var(--c-text);
   stroke-width: 2.5;
 }
+.chart .legend-dot {
+  stroke: var(--c-bg);
+  stroke-width: 2;
+}
+.chart .pt-label--best {
+  font-size: calc(30px * var(--fs, 1));
+}
+.chart .wait-bar {
+  fill: var(--p1);
+}
+.chart .clip-mark {
+  stroke: var(--c-bg);
+  stroke-width: 4;
+}
+.chart .wait-marker {
+  stroke: var(--c-text);
+  stroke-width: 3;
+  stroke-dasharray: 8 6;
+}
+.chart .marker-label {
+  font-family: var(--font-data);
+  font-weight: 600;
+  font-size: calc(22px * var(--fs, 1));
+  paint-order: stroke;
+  stroke: var(--c-bg);
+  stroke-width: 6px;
+  font-variant-numeric: tabular-nums;
+}
 
 /* Readouts: big numbers in Zilla, margins in Fira; each column carries its bar's colour as a strip. */
 .readouts {
@@ -927,6 +955,7 @@ kbd .arrow {
   flex-wrap: wrap;
   gap: 0.75rem 2rem;
   min-height: 3.25rem;
+  flex-shrink: 0;
 }
 .ctl {
   display: flex;
@@ -1081,6 +1110,11 @@ kbd .arrow {
   background: var(--fair);
   color: var(--on-fair);
 }
+/* Off target with no side to lean toward (an average that is too generous or too stingy): ink. */
+.verdict.off {
+  background: var(--c-text);
+  color: var(--c-bg);
+}
 /* Not enough data: no colour of its own, just an outline (the prompt in the sub-line says what to do). */
 .verdict.unclear {
   border: var(--border-control) solid var(--c-text);
@@ -1231,6 +1265,273 @@ kbd .arrow {
   max-width: 22rem;
 }
 
+/* ---------- one side against another (push your luck, best-of-N, boss, handicap) ---------- */
+.match {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 1.5vh, 1.25rem);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.result-grid.single {
+  grid-template-columns: 1fr;
+}
+.result-grid.single .race-readout {
+  justify-content: center;
+  grid-template-columns: max-content max-content max-content;
+}
+/* A third player (the smart bot) is ink: no line colour claims it. */
+.who--ink {
+  background: var(--c-text);
+  color: var(--c-bg);
+}
+
+/* ---------- push your luck ---------- */
+.luck-turn-view {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2vh;
+}
+.luck-turn {
+  display: grid;
+  justify-items: center;
+  gap: 1.25rem;
+}
+.lt-who {
+  margin: 0;
+  font-size: 1.75rem;
+}
+/* Room for two rows of dice, so a long turn never pushes the total down. */
+.lt-dice {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: flex-start;
+  gap: 0.625rem;
+  width: min(100%, calc(10 * 60px + 9 * 0.625rem));
+  min-height: calc(2 * 60px + 0.625rem);
+}
+.die--bust .die-body {
+  fill: var(--c-bg);
+  stroke: var(--c-text);
+  stroke-width: 3;
+}
+.die--bust .pip {
+  fill: var(--c-text);
+}
+.lt-total {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: baseline;
+  gap: 0.75rem;
+  width: min(100%, 32rem);
+}
+.lt-num {
+  font-family: var(--font-voice);
+  font-weight: 600;
+  font-size: 4rem;
+  line-height: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.lt-num.is-bust {
+  color: var(--c-text-muted);
+  text-decoration: line-through;
+  text-decoration-thickness: 0.06em;
+}
+.lt-label {
+  font-size: 1.5rem;
+  color: var(--c-text-muted);
+}
+.robin-view {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.mu-list {
+  display: grid;
+  gap: clamp(1rem, 3vh, 2.25rem);
+}
+.mu-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 15rem;
+  grid-template-areas:
+    'names names'
+    'bar result';
+  gap: 0.5rem 1.5rem;
+  align-items: center;
+}
+.mu-names {
+  grid-area: names;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+  font-size: 1.5rem;
+}
+.mu-vs {
+  color: var(--c-text-muted);
+}
+.mu-bar {
+  grid-area: bar;
+  display: flex;
+  height: clamp(3rem, 8vh, 4.5rem);
+  background: var(--c-bg-alt);
+}
+.mu-seg {
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  font-family: var(--font-voice);
+  font-weight: 600;
+  font-size: 2rem;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.mu-seg + .mu-seg {
+  flex: 1;
+  justify-content: flex-end;
+}
+.mu-seg--p1 {
+  background: var(--p1);
+  color: var(--on-p1);
+}
+.mu-seg--p2 {
+  background: var(--p2);
+  color: var(--on-p2);
+}
+.mu-seg--ink {
+  background: var(--c-text);
+  color: var(--c-bg);
+}
+.mu-result {
+  grid-area: result;
+  display: flex;
+  flex-direction: column;
+}
+.mu-verdict {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.mu-ci {
+  font-family: var(--font-data);
+  font-weight: 500;
+  font-size: 1.125rem;
+  color: var(--c-text-muted);
+}
+
+/* ---------- loot drops ---------- */
+.loot-stats {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem 2rem;
+  align-items: start;
+}
+.ls-stat {
+  border-top: var(--strip-w) solid var(--p1);
+  padding-top: 0.375rem;
+}
+.ls-label {
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+.ls-big {
+  font-family: var(--font-voice);
+  font-weight: 600;
+  font-size: 3.25rem;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.ls-small {
+  font-family: var(--font-data);
+  font-weight: 500;
+  font-size: 1.125rem;
+  color: var(--c-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.ls-stat .verdict {
+  font-size: 1.25rem;
+  margin-top: 0.5rem;
+  white-space: nowrap;
+}
+.ls-label,
+.ls-small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.wait-host {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* ---------- boss fight ---------- */
+.fight-view {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3vh;
+}
+.fight {
+  display: grid;
+  gap: 1.5rem;
+}
+.hp-row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr) 9.5rem;
+  align-items: center;
+  gap: 1rem;
+}
+.hp-name {
+  font-size: 1.75rem;
+}
+.hp-bar {
+  height: clamp(2.25rem, 7vh, 4rem);
+  border: var(--border-control) solid var(--c-text);
+  background: var(--c-bg);
+}
+.hp-fill {
+  height: 100%;
+  transition: width 0.4s cubic-bezier(0.3, 0.7, 0.3, 1);
+}
+.hp-fill--p1 {
+  background: var(--p1);
+}
+.hp-fill--p2 {
+  background: var(--p2);
+}
+.hp-num {
+  font-family: var(--font-data);
+  font-weight: 600;
+  font-size: 1.5rem;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+/* Discussion prompts: the design system's lanes, sized for the stage. */
+.talk-view {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.talk-lanes {
+  margin: 0;
+  gap: 1.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.talk-lanes .lane {
+  padding: 1.75rem 1.5rem;
+  font-size: 1.75rem;
+  line-height: 1.35;
+}
+.talk-lanes .lane__head {
+  font-size: 2.25rem;
+  margin-bottom: 0.75rem;
+}
+
 /* ---------- tablets, phones and short windows: one scrolling column ---------- */
 @media (max-width: 999.98px), (max-height: 520px) {
   html,
@@ -1263,8 +1564,10 @@ kbd .arrow {
     grid-template-columns: 1fr;
     flex: none;
   }
-  .result-grid .race-readout {
+  .result-grid .race-readout,
+  .result-grid.single .race-readout {
     justify-content: start;
+    grid-template-columns: max-content max-content minmax(0, 1fr);
   }
   .pt-grid {
     grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
@@ -1272,6 +1575,23 @@ kbd .arrow {
   }
   .tug-host {
     flex-basis: 9rem;
+  }
+  .fight-view,
+  .luck-turn-view,
+  .robin-view,
+  .talk-view {
+    min-height: 60vh;
+  }
+  .wait-host {
+    flex: none;
+    height: 60vh;
+    min-height: 20rem;
+  }
+  .loot-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .talk-lanes {
+    grid-template-columns: 1fr;
   }
   .conv-readout {
     right: 0.75rem;
@@ -1381,6 +1701,67 @@ kbd .arrow {
   }
   .pt-big {
     font-size: 2.25rem;
+  }
+  .lt-who,
+  .mu-names {
+    font-size: 1.125rem;
+  }
+  .lt-num {
+    font-size: 3rem;
+  }
+  .lt-label {
+    font-size: 1.125rem;
+    white-space: nowrap;
+  }
+  /* The closing sentence can take three lines; reserve them so the view never changes height. */
+  .luck-turn .turn-text {
+    min-height: calc(3 * 1.4em);
+    text-align: center;
+  }
+  .lt-dice {
+    min-height: calc(3 * 60px + 2 * 0.625rem);
+  }
+  .mu-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'names'
+      'bar'
+      'result';
+  }
+  .mu-seg {
+    font-size: 1.375rem;
+    padding: 0 0.5rem;
+  }
+  .ls-big {
+    font-size: 2.25rem;
+  }
+  /* Labels may wrap on phones; two lines are reserved so every stat starts its number at the same height. */
+  .ls-label {
+    font-size: 1rem;
+    white-space: normal;
+    min-height: calc(2 * 1.3em);
+    line-height: 1.3;
+  }
+  .ls-small {
+    font-size: 0.9375rem;
+  }
+  .hp-row {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+  .hp-num {
+    grid-column: 2;
+    text-align: left;
+    font-size: 1.125rem;
+  }
+  .hp-name {
+    font-size: 1.125rem;
+  }
+  .talk-lanes .lane {
+    font-size: 1.125rem;
+    padding: 1rem;
+  }
+  .talk-lanes .lane__head {
+    font-size: 1.5rem;
   }
   .pt-label {
     font-size: 1rem;

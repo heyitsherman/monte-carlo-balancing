@@ -130,6 +130,18 @@ Snowball rules, house edge and roguelike win rates are discussion prompts in tha
 
 **Done when:** each game has exact-versus-simulation tests; each target is met and reported with real numbers; each preset moves the numbers the way its blurb claims.
 
+### Notes from execution (Phase 4)
+
+- Four chapters in the library, none in the default playlist: `luck` (2 min), `loot` (2 min), `bestof` (1¾ min), `unfair` (2½ min). The whole library runs about 15 minutes.
+- **Design choices that fill in details the plan left open** (each is listed in the README's Decisions):
+  - Push your luck: bots bank at a fixed turn total and ignore the score, a coin decides who starts, and the goal is 100. The naive test is careful (bank at 10) against greedy (bank at 30); the smarter bot banks at 20.
+  - Boss fight: hero 30 HP, hero hits for a d6, then the boss hits back for a d6. Tuned on boss HP: 32 HP is the fair fight, 28 HP is the 70% target.
+  - Targets: boss 70% ± 3, handicap P2 58% ± 3, loot average 20 ± 1 tries, best-of-N "at least 75%" as a band from 75% to 100%.
+- **Targets met** (exact, confirmed by simulation at 200,000 runs in the tests): banking at 20 (and 21) scores the most per turn, 8.14; smart beats careful 66.0% and greedy 63.8% at 10,000 games, and a bot that always rolls three times wins only 34.7% against it. Loot 4% with pity at 40 averages 20.12 tries with nobody past 40 (5% plain: 20, 1 in 100 at 90+; 5% with pity: 17.43). Best-of-45 is the shortest series at 75.06%. Boss 28 HP: 70.42%. Handicap head start 3: P2 58.67%.
+- Best-of-45 sits on the target's edge, so at 10,000 series it reads "Not enough data", and N ends on "Still too close to call". That is true and useful in class: the simulation brackets the answer, the math names it.
+- Every game (and the race) has presets with one-line lessons; `tests/moreGames.test.ts` checks each claim.
+- New shared pieces: `assess()` takes any estimate with a range (so a mean can have a target band), the "Not enough data" sentences name what was simulated ("fights", "series"), `ui/match.ts` is the race's result logic for any two sides, and two charts (a dot sweep for any estimate, a wait chart for tries per player).
+
 ## Phase 5: Lab
 
 - **Route:** `?lab`. Two panes: inputs on the left, results on the right; stacked on phones. A seed field is visible.
