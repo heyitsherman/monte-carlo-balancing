@@ -64,5 +64,11 @@ export function animate(ms: number, frame: (t: number) => void, cancelled: () =>
   });
 }
 
+/**
+ * This page's address without query or hash. Not `origin + pathname`: a page opened from disk (the offline
+ * copy) has the origin "null", which would break every link built from it.
+ */
+export const pageBase = () => location.href.split(/[?#]/)[0];
+
 /** Format a number with fixed digits, or an em dash when not finite. */
 export const fx = (x: number, d = 1) => (Number.isFinite(x) ? x.toFixed(d) : '—');

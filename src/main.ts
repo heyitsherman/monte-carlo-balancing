@@ -12,6 +12,7 @@ import { LuckChapter } from './ui/chapters/luck';
 import { PlaytestsChapter } from './ui/chapters/playtests';
 import { RaceChapter } from './ui/chapters/race';
 import { UnfairChapter } from './ui/chapters/unfair';
+import { Lab } from './lab/lab';
 import { Presenter } from './ui/presenter';
 
 /** Every chapter available. A session picks from these with `?set=id,id,…`. */
@@ -28,7 +29,12 @@ const library = [
 ];
 
 const root = document.getElementById('app')!;
-new Presenter(root, library, runner, {
-  // The 5-minute talk, shown when the URL has no ?set=
-  defaultSet: ['title', 'duel', 'race', 'closing'],
-});
+if (new URLSearchParams(location.search).has('lab')) {
+  // The student Lab: any game, its rules as controls, A/B comparison and sweeps.
+  new Lab(root, runner);
+} else {
+  new Presenter(root, library, runner, {
+    // The 5-minute talk, shown when the URL has no ?set=
+    defaultSet: ['title', 'duel', 'race', 'closing'],
+  });
+}

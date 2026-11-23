@@ -64,4 +64,6 @@ export interface Chapter {
   onKey?(key: string): boolean;
   /** Seed changed: drop cached results. */
   reseed?(): void;
+  /** The game and rules on screen right now, for "Open in Lab" (L); null when there is nothing to open. */
+  labLink?(): { game: string; config: object } | null;
 }

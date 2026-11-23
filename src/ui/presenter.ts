@@ -6,7 +6,8 @@ import { parseHash, parsePlaylist, playlistUrl } from './playlist';
 import type { AppContext, Chapter, EnterInfo, Mode, SubOptions } from './types';
 import { icon, MARK_SVG } from './icons';
 import { LayoutCheck, reserveHeight } from './layout';
-import { el, esc } from './util';
+import { labUrl } from '../lab/labState';
+import { el, esc, pageBase } from './util';
 
 export const DEFAULT_SEED = 'dgt-balance';
 
@@ -26,6 +27,7 @@ function keyRows(chapterCount: number): [string, string][] {
     [kbd('N'), 'Run 10× more games, when a verdict says “Not enough data”'],
     [chapterCount > 1 ? `${kbd('1')} to ${kbd(String(Math.min(9, chapterCount)))}` : kbd('1'), 'Jump to a chapter'],
     [kbd('O'), 'Overview: every chapter and step'],
+    [kbd('L'), 'Open these rules in the Lab (a new tab)'],
     [kbd('M'), 'Sound on or off'],
     [kbd('T'), 'Light or dark theme'],
     [kbd('Esc'), 'Show or hide this help'],
@@ -73,6 +75,7 @@ export class Presenter {
   private soundBtn: HTMLButtonElement;
   private modeBtn: HTMLButtonElement;
   private progressEl: HTMLElement;
+  private labBtn: HTMLButtonElement;
   private layoutCheck: LayoutCheck | null = null;
   readonly ctx: AppContext;
 
@@ -135,12 +138,14 @@ export class Presenter {
     };
     this.modeBtn = btn(icon('fast'), 'Fast mode (F)', () => this.toggleMode());
     this.soundBtn = btn(icon('sound'), 'Sound (M)', () => sound.toggle(), 'sound-btn');
+    this.labBtn = btn(icon('lab'), 'Open in the Lab (L)', () => this.openLab());
     nav.append(
       btn(icon('prev'), 'Previous step', () => this.prev()),
       btn(icon('next'), 'Next step', () => this.next()),
       btn(icon('rerun'), 'Re-run (R)', () => this.rerun()),
       this.modeBtn,
       btn(icon('overview'), 'Overview (O)', () => this.toggleOverview()),
+      this.labBtn,
       this.soundBtn,
       btn(icon('theme'), 'Light or dark theme (T)', () => this.toggleTheme()),
       btn(icon('help'), 'Keys (Esc)', () => this.toggleHelp()),
@@ -258,6 +263,15 @@ export class Presenter {
     this.progressEl.style.setProperty('--progress', String(this.progressFraction()));
     this.renderFooter();
     ch.enter(si, info);
+    this.labBtn.disabled = !ch.labLink?.();
+  }
+
+  /** L: this step's game and rules in the Lab, in a new tab so the talk keeps its place. */
+  openLab(): void {
+    const link = this.chapters[this.ci].labLink?.();
+    if (!link) return;
+    const url = labUrl(pageBase(), link.game, link.config as Record<string, unknown>, this.seed);
+    window.open(url, '_blank', 'noopener');
   }
 
   /** The sub-line takes the height of the tallest text this step can show, so swapping it never moves the stage. */
@@ -387,7 +401,7 @@ export class Presenter {
 
   /** Every chapter of this session with its steps (click to jump), plus session links. */
   private renderOverview(): void {
-    const base = `${location.origin}${location.pathname}`;
+    const base = pageBase();
     const minutes = this.chapters.reduce((s, c) => s + c.minutes, 0);
     const cards = this.chapters
       .map((ch, ci) => {
@@ -465,6 +479,7 @@ export class Presenter {
         else if (lower === 's') this.reseed();
         else if (lower === 't') this.toggleTheme();
         else if (lower === 'o') this.toggleOverview();
+        else if (lower === 'l') this.openLab();
         else if (lower === 'm') sound.toggle();
         else if (/^[1-9]$/.test(k)) this.jump(Number(k) - 1);
         else handled = ch.onKey?.(lower) ?? false;

@@ -156,6 +156,16 @@ Snowball rules, house edge and roguelike win rates are discussion prompts in tha
 
 **Done when:** every game works in the Lab with no game-specific UI code; a URL round-trips the Lab state; it is usable at 375 px.
 
+### Notes from execution (Phase 5)
+
+- All six games work in the Lab from their descriptions alone (`src/lab/`); the only per-game data is the picker's list of names. Settings can declare `when` (only relevant if another setting has a value), which the Lab uses to hide, for example, a bot's bank threshold when it rolls a fixed number of times.
+- A/B: one set of controls with "Editing rules A / B"; settings that differ are flagged with the other set's value, and a line lists every difference. B − A uses Newcombe's interval (from the two Wilson intervals) for proportions and quadrature for means, with "A real difference" or "Too small to tell apart at this many runs" in words.
+- Sweeps go over any setting (numbers, switches and choices), not only numeric ones. Cells are run through the Lab's own cache rather than `sweep()`, so a sweep cell and the Results view share runs. Two-setting sweeps cap each cell at 10,000 runs. On-target heatmap cells are filled Teal (an outline didn't read on Cobalt).
+- The run-count calculator uses the same ± students see: runs until the 95% ± is smaller than the edge, doubled when comparing two rule sets. A 2 pp edge near 50%: 2,401 runs.
+- "Open in Lab": the flask button and `L` in the talk open the step's game, rules and seed in a new tab. Title and Closing have nothing to open, so the button is disabled there.
+- Dice Duel gained three presets (3 vs 2, 2 vs 2, 1 vs 1), so every game has presets.
+- The Lab's header band is neutral like the talk's (D12), not the design-tool layer's Cobalt; listed as a design-system exception.
+
 ## Phase 6: Teaching kit (`docs/teaching/`)
 
 - **Facilitator guide**: a menu of segments with timings and playlist URLs, talking points, likely misconceptions, and discussion prompts (including when unfairness is the goal).

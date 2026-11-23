@@ -211,14 +211,14 @@ export const pushLuck: Game<LuckConfig, LuckOutcome, LuckAggregate, LuckExact> =
       key: 'aStrategy', label: 'Bot A plays', kind: 'choice', help: "Bot A's plan for every turn.",
       options: [{ value: 'holdAt', label: 'Bank at a turn total' }, { value: 'rolls', label: 'Roll a fixed number of times' }],
     },
-    { key: 'aHoldAt', label: 'Bot A banks at', kind: 'int', min: 2, max: 60, unit: 'points', help: 'With "bank at a turn total": stop once the turn reaches this.' },
-    { key: 'aRolls', label: 'Bot A rolls', kind: 'int', min: 1, max: 12, unit: 'times', help: 'With "roll a fixed number of times": stop after this many rolls.' },
+    { key: 'aHoldAt', label: 'Bot A banks at', kind: 'int', min: 2, max: 60, unit: 'points', help: 'Stop once the turn reaches this total.', when: { key: 'aStrategy', equals: 'holdAt' } },
+    { key: 'aRolls', label: 'Bot A rolls', kind: 'int', min: 1, max: 12, unit: 'times', help: 'Stop after this many rolls.', when: { key: 'aStrategy', equals: 'rolls' } },
     {
       key: 'bStrategy', label: 'Bot B plays', kind: 'choice', help: "Bot B's plan for every turn.",
       options: [{ value: 'holdAt', label: 'Bank at a turn total' }, { value: 'rolls', label: 'Roll a fixed number of times' }],
     },
-    { key: 'bHoldAt', label: 'Bot B banks at', kind: 'int', min: 2, max: 60, unit: 'points', help: 'With "bank at a turn total": stop once the turn reaches this.' },
-    { key: 'bRolls', label: 'Bot B rolls', kind: 'int', min: 1, max: 12, unit: 'times', help: 'With "roll a fixed number of times": stop after this many rolls.' },
+    { key: 'bHoldAt', label: 'Bot B banks at', kind: 'int', min: 2, max: 60, unit: 'points', help: 'Stop once the turn reaches this total.', when: { key: 'bStrategy', equals: 'holdAt' } },
+    { key: 'bRolls', label: 'Bot B rolls', kind: 'int', min: 1, max: 12, unit: 'times', help: 'Stop after this many rolls.', when: { key: 'bStrategy', equals: 'rolls' } },
     {
       key: 'firstPlayer', label: 'First turn', kind: 'choice', help: 'A coin toss removes the first-move edge, so only the plans are compared.',
       options: [{ value: 'coin', label: 'Coin toss' }, { value: 'a', label: 'Bot A' }, { value: 'b', label: 'Bot B' }],

@@ -80,6 +80,10 @@ export class DiceDuelChapter implements Chapter {
   private conv!: ChartHost<ConvergenceData>;
   private battleCount = 0;
   private step = 0;
+
+  labLink() {
+    return { game: 'diceDuel', config: diceDuel.defaultConfig };
+  }
   private trace?: Promise<Map<number, DuelAggregate>>;
   private exact?: Promise<DuelExact>;
 

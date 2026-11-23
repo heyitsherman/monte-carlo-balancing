@@ -72,7 +72,13 @@ export class LuckChapter implements Chapter {
   ];
 
   private ctx!: AppContext;
+  private step = 0;
   private demoCount = 0;
+
+  labLink() {
+    const config = this.step === 3 ? match('smart', 'careful') : this.step === 4 ? { ...BASE, aHoldAt: 20, bHoldAt: 20 } : match('careful', 'greedy');
+    return { game: 'pushLuck', config };
+  }
   private cache = new Map<string, Promise<LuckAggregate>>();
   private turnView!: HTMLElement;
   private matchView!: HTMLElement;
@@ -125,6 +131,7 @@ export class LuckChapter implements Chapter {
   }
 
   enter(step: number, info: EnterInfo): void {
+    this.step = step;
     this.panel.stop();
     const view = ['turn', 'match', 'match', 'robin', 'sweep'][step];
     this.turnView.hidden = view !== 'turn';

@@ -59,6 +59,8 @@ interface ParamBase {
   label: string;
   /** One line explaining the rule, in plain words. */
   help?: string;
+  /** Only relevant when another setting has this value (e.g. a bot's threshold when it banks at a total). */
+  when?: { key: string; equals: string | number | boolean };
 }
 
 export type ParamSpec =

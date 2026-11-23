@@ -64,6 +64,10 @@ export class PlaytestsChapter implements Chapter {
 
   private ctx!: AppContext;
   private grid!: HTMLElement;
+
+  labLink() {
+    return { game: 'race', config: BASE };
+  }
   private truth!: HTMLElement;
 
   mount(stage: HTMLElement, ctx: AppContext): void {

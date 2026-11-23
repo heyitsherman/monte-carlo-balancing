@@ -66,6 +66,10 @@ export class LootChapter implements Chapter {
   private ctx!: AppContext;
   private step = 0;
   private cfg: LootConfig = PLAIN;
+
+  labLink() {
+    return { game: 'loot', config: this.cfg };
+  }
   private token = 0;
   private cache = new Map<string, Promise<LootAggregate>>();
   private slider!: HTMLInputElement;

@@ -126,6 +126,10 @@ export class RaceChapter implements Chapter {
   private ctx!: AppContext;
   private step = 0;
   private cfg: RaceConfig = { ...BASE };
+
+  labLink() {
+    return { game: 'race', config: STEP_SETUP[this.step].view === 'result' ? this.cfg : BASE };
+  }
   private token = 0;
   private demoCount = 0;
   private cache = new Map<string, Promise<RaceAggregate>>();

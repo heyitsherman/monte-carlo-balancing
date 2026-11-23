@@ -61,6 +61,11 @@ export class UnfairChapter implements Chapter {
   private ctx!: AppContext;
   private step = 0;
   private demoCount = 0;
+
+  labLink() {
+    if (this.step === 3) return { game: 'race', config: this.raceCfg };
+    return { game: 'boss', config: this.step === 4 ? { ...BOSS, bossHp: 28 } : this.bossCfg };
+  }
   private bossCfg: BossConfig = BOSS;
   private raceCfg: RaceConfig = RACE;
   private fightView!: HTMLElement;

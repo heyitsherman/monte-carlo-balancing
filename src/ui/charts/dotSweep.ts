@@ -43,14 +43,24 @@ const FILL: Record<DotTone, string> = {
   best: 'var(--fair)',
 };
 
-function legend(d: DotSweepData, x: number, y: number, fs: number): string {
+function legend(d: DotSweepData, x: number, y0: number, fs: number, right: number): string {
   let s = '';
   let cx = x;
-  for (const item of d.legend) {
+  let y = y0;
+  // The target band is named in the legend (a shaded swatch), so its caption never sits on the points.
+  const items = [...d.legend, ...(d.band ? [{ mark: 'band' as const, label: d.band.label }] : [])];
+  for (const item of items) {
+    const width = (item.label.length * 10.5 + 70) * fs;
+    // Wrap to a second line rather than run off the edge (phones).
+    if (cx > x && cx + width - 30 * fs > right) {
+      cx = 8 * fs;
+      y += 28 * fs;
+    }
     if (item.mark === 'exact') s += line(cx, y - 7 * fs, cx + 30 * fs, y - 7 * fs, 'exact');
+    else if (item.mark === 'band') s += `<rect x="${cx}" y="${y - 19 * fs}" width="${30 * fs}" height="${22 * fs}" class="target-band"/>`;
     else s += `<circle cx="${cx + 15 * fs}" cy="${y - 7 * fs}" r="${8 * fs}" fill="${FILL[item.mark]}" class="legend-dot"/>`;
     s += text(cx + 38 * fs, y, item.label, 'legend', 'start');
-    cx += (item.label.length * 10.5 + 70) * fs;
+    cx += width;
   }
   return s;
 }
@@ -76,9 +86,7 @@ export function renderDotSweep(d: DotSweepData, w: number, h: number): string {
     s += line(m.l, y(v), w - m.r, y(v), 'grid');
     s += text(m.l - 12 * fs, y(v) + 7 * fs, d.yFormat(v), 'tick', 'end');
   }
-  // The band's caption sits in its top-left corner, clear of rising curves.
-  if (d.band) s += text(m.l + 12 * fs, clampY(d.band.hi) + 28 * fs, d.band.label, 'fair-label', 'start');
-  s += legend(d, m.l, 26 * fs, fs);
+  s += legend(d, m.l, 26 * fs, fs, w);
   d.xs.forEach((v, i) => (s += text(cx(i), h - m.b + 36 * fs, v, 'cat-label')));
   s += text((m.l + w - m.r) / 2, h - 14 * fs, d.xLabel, 'axis-title');
 

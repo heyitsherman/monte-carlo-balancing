@@ -125,4 +125,9 @@ export const diceDuel: Game<DuelConfig, DuelOutcome, DuelAggregate, DuelExact> =
     return agg;
   },
   exact: exactDuel,
+  presets: [
+    { id: 'three-two', label: '3 dice against 2', blurb: 'Three dice against two: the attacker sweeps 37% of battles, the defender only 29%.', config: { attackerDice: 3, defenderDice: 2 } },
+    { id: 'two-two', label: '2 dice against 2', blurb: 'Two against two: ties go to the defender, so the defender sweeps twice as often as the attacker.', config: { attackerDice: 2, defenderDice: 2 } },
+    { id: 'one-one', label: '1 die against 1', blurb: 'One die each: ties go to the defender, so the attacker wins only 15 battles in 36.', config: { attackerDice: 1, defenderDice: 1 } },
+  ],
 };

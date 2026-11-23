@@ -41,6 +41,10 @@ export class BestOfChapter implements Chapter {
   private ctx!: AppContext;
   private step = 0;
   private cfg: BestOfConfig = BASE;
+
+  labLink() {
+    return { game: 'bestOf', config: this.cfg };
+  }
   private cache = new Map<string, Promise<BestOfAggregate>>();
   private matchView!: HTMLElement;
   private sweepView!: HTMLElement;

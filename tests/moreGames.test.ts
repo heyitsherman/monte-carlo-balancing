@@ -17,6 +17,7 @@ import { boss, exactBoss, fightBoss, type BossAggregate, type BossConfig, type R
 import { exactLoot, loot, type LootAggregate, type LootConfig } from '../src/games/loot';
 import { playTurn, pushLuck, turnExact, type LuckAggregate, type LuckConfig, type Plan, type RollEvent } from '../src/games/pushLuck';
 import { exactRace, race } from '../src/games/race';
+import { diceDuel, exactDuel } from '../src/games/diceDuel';
 import { games } from '../src/games/registry';
 import type { AnyGame } from '../src/games/types';
 import { createRng } from '../src/core/rng';
@@ -266,5 +267,18 @@ describe('Handicap', () => {
     const four = exactRace({ ...race.defaultConfig, p2HeadStart: 4 }).p2Win;
     expect(assess({ p: two, lo: two, hi: two }, HANDICAP_TARGET).status).toBe('below');
     expect(assess({ p: four, lo: four, hi: four }, HANDICAP_TARGET).status).toBe('above');
+  });
+});
+
+describe('Dice Duel presets', () => {
+  test('presets do what their blurbs say', () => {
+    const p = Object.fromEntries(diceDuel.presets!.map((x) => [x.id, x.config]));
+    const e = (id: string) => exactDuel({ ...diceDuel.defaultConfig, ...p[id] });
+    expect(e('three-two').attackerWinsBoth.p).toBeCloseTo(0.37, 2);
+    expect(e('three-two').defenderWinsBoth.p).toBeCloseTo(0.29, 2);
+    const two = e('two-two');
+    expect(two.defenderWinsBoth.p / two.attackerWinsBoth.p).toBeGreaterThan(1.9);
+    expect(two.defenderWinsBoth.p / two.attackerWinsBoth.p).toBeLessThan(2.1);
+    expect(e('one-one').attackerWinsBoth).toMatchObject({ num: 15, den: 36 });
   });
 });

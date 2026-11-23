@@ -6,6 +6,8 @@ A presenter-driven browser demo that explains **Monte Carlo simulation as a game
 
 **Live demo:** https://heyitsherman.github.io/monte-carlo-balancing/ · **Offline copy:** [offline.html](https://heyitsherman.github.io/monte-carlo-balancing/offline.html), one file that runs from a USB stick with no network (also linked from the `Esc` help).
 
+**Lab:** [?lab](https://heyitsherman.github.io/monte-carlo-balancing/?lab), where students change any game's rules and run it themselves, no code.
+
 **Roadmap:** [docs/PLAN.md](docs/PLAN.md) — turning the talk into a modular teaching kit.
 
 ---
@@ -25,6 +27,7 @@ Open the page full-screen (F11) on the projector. Everything is keyboard-driven;
 | `N` | When a verdict reads "Not enough data: run more": run 100,000 more of the same rules (games, fights or series; also a button in the sub-line) |
 | `1` – `9` | Jump to that chapter of the session (default talk: 1 Title, 2 Dice Duel, 3 First-Player Problem, 4 Closing) |
 | `O` | Overview: every chapter and step of the session; click a step to jump there |
+| `L` | Open the current step's game and rules in the Lab, in a new tab (also the flask button) |
 | `M` | Sound on / off (remembered on this device) |
 | `T` | Toggle light / dark theme |
 | `Esc` | Help overlay with these keys (any key or click closes it) |
@@ -116,6 +119,21 @@ Best-of-45 sits right on the 75% edge, so at 10,000 series it always reads "Not 
 **If a verdict reads "Not enough data: run more"** (after `S`, head start 2 does this about 1 time in 5): the sub-line says which edge of the fair band the range crosses, and that edge is drawn solid on the bar. Press `N` and narrate the range shrinking as 100,000 games are added; the sub-line then states the settled verdict.
 
 The default seed is `dgt-balance`, so every rehearsal shows identical numbers. Pressing `S` gives fresh numbers; reload the page to return to the default seed.
+
+## The Lab (`?lab`)
+
+The student side of the kit: any game, its rules as controls, no code. Open it at `…/monte-carlo-balancing/?lab`, or press `L` in the talk to open the step on screen with the same rules and seed.
+
+- **Rules on the left, results on the right** (one column on phones). Pick a game, change any setting with its slider, switch or menu, or pick a **preset**: each preset names the one thing it teaches ("A pity timer at 40 ends the droughts, but the average falls to about 17: too generous").
+- **Results:** the selected measure as big numbers with its ± and its target verdict, a table of every measure the game reports (click a row to select it), a chart with the exact answer marked where the math has one, and a one-line method ("Simulated: 10,000 runs per rule set, seed …").
+- **Compare with rules B:** a second rule set, edited with the same controls; settings that differ are flagged, and the results add a **B − A** column with its own 95% interval and, in words, whether the difference is real or too small to tell apart at that many runs.
+- **Sweep a setting:** every value of one setting (a dot chart against the target band), or two settings against each other (a heatmap; cells on target are Teal). Two-setting sweeps use at most 10,000 runs per cell.
+- **How many runs?** Under the results: "To tell an edge of 2 pp from no edge, you need about 2,401 runs." The edge is editable; comparing two rule sets doubles the answer.
+- **Download CSV** of the results or the sweep.
+- **The URL is the state.** Game, both rule sets, runs, seed, view and sweep settings are all in the address, so a student can share exactly what they found. Only settings that differ from the defaults are written, e.g. `?lab&game=race&b&b.catchUp=1`.
+- **Same behaviour as the talk** (plan D8): Run (or `R`) plays the paced build-up and says so; changing a setting updates at once; "Not enough data" offers `N` to run 10× more, labelled "Adding runs: …"; the same sounds, `M` to mute and `T` for the theme.
+
+Every game works in the Lab without Lab code: controls come from each game's setting descriptions, the table and charts from its metric descriptions, and the presets from its preset list. A setting can say it only matters when another has a given value (bot A's bank threshold only when bot A banks at a total), and the Lab hides it otherwise.
 
 ## Measured numbers (seed `dgt-balance`)
 
@@ -219,6 +237,10 @@ src/
   fonts/          the four OFL fonts (Fontsource WOFF2) and their licences
   fonts.css       @font-face rules for them
   styles.css      app styles on the design-system tokens
+  lab/
+    lab.ts        the Lab page: generated controls, results, A/B comparison, sweeps, CSV
+    labState.ts   the Lab's state and its URL (pure, unit-tested)
+    labStats.ts   B − A intervals, runs needed to detect an edge, CSV (pure, unit-tested)
   ui/
     presenter.ts  chapter/step state machine, keyboard, header band, caption, footer, help, overview
     icons.ts      the mark and the header-band icons
@@ -249,6 +271,7 @@ The RNG stream for a run is derived from `(seed, gameId, config)`. Consequences:
    - `emptyAggregate()` / `accumulate(agg, outcome)`: a cumulative, structured-cloneable aggregate (mutating and returning `agg` is fine).
    - `exact(config)` *(optional)*: a closed-form or DP answer, used as a test oracle and as overlay markers.
    - `presets` *(optional)*: rule sets for the Lab, each with a one-line lesson that a test must confirm.
+   - The game now appears in the Lab automatically (add it to `LAB_GAMES` in `src/lab/labState.ts` with a name for people; a test checks the list).
 2. **Register it** — add one line to `src/games/registry.ts`. The worker, `runner.run('myGame', …)` and `sweep('myGame', …)` now work.
 3. **Chapter file** — create `src/ui/chapters/myGame.ts` implementing `Chapter` (`src/ui/types.ts`): a short URL-safe `id`, rough `minutes`, a `steps` list of captions, `mount()` to build DOM once, and an idempotent `enter(step, info)`. Make it self-contained: its first step should set the scene without relying on another chapter. Play build-ups with `playBuildUp` (`src/ui/buildUp.ts`) so every chapter follows the same animation rule. Add it to the `library` in `src/main.ts` (and to `defaultSet` if it belongs in the default talk).
 4. **Tests** — add exact-vs-simulation checks using `runSync` (`tests/games.test.ts`, `tests/moreGames.test.ts`), plus one test per preset that checks its lesson.
@@ -289,6 +312,9 @@ returns a row-major grid with `.at(i, j)`. A heatmap chapter needs only a new ch
 - **"Games simulated"** in the footer is the session total, a nice live counter for the audience.
 - **Layouts.** Stage mode (1000 px wide or more, 600 px tall, landscape) fits one screen and scales all type with the window: 16 px at 1280×720, 24 px at 1920×1080, 15 px on a 1024×768 projector. Below 1000 px the page becomes one scrolling column (tablets); below 761 px type and controls shrink further (phones). The design system's stage threshold is 1180 px; it starts at 1000 px here so a 4:3 projector still gets the fit-to-screen layout.
 - **The offline copy** is the same app built with `vite-plugin-singlefile`: scripts, styles, fonts and the simulation worker are inlined, and the favicon is a data URL. The worker is a classic (IIFE) script because Chrome refuses module workers from blob URLs on pages opened from disk. `scripts/offline.mjs` fails the build if the file references anything outside itself.
+- **The Lab is generic by construction.** It reads only the `Game` interface (settings, metrics, presets, exact). A metric's target, when it has one, drives the verdicts, the band on the charts and the "Not enough data" prompt. B − A for proportions uses Newcombe's interval built from the two Wilson intervals, so it agrees with the ± shown beside each number; for means the margins add in quadrature.
+- **"How many runs?"** is the number of runs before the 95% ± is smaller than the edge: (1.96 · sd / edge)², with sd = √(p(1 − p)) from the current result (½ before there is one). It is deliberately the same ± students see on screen, not a power calculation.
+- **Lab tweaks re-run after 150 ms** (the design-tool debounce), so dragging a slider doesn't queue a run per step.
 - **Tooling:** Vite 6, TypeScript 5 (strict), Vitest 3.
 
 ## Design system
@@ -308,7 +334,8 @@ Built on Herman's heyitsherman system: **heyitsherman-web v1.1** with the **heyi
 1. **Simulating problems with exact answers.** The design-tool rule says to compute exactly where possible. Here, agreement between simulation and the math *is* the lesson.
 2. **Animated build-ups and counters on explicit runs.** The design-tool motion rule says to update in place. The build-up is the teaching device: it is feedback to a presenter action, it follows one rule in every mode, it is labelled as a replay, and it is off under reduced motion.
 3. **No How-to-play guide on load.** It would pop up in front of a class. `Esc` opens the keys.
-4. **Process note, not a rule exception.** The source stays Vite + TypeScript. The skill's script prepares the design-system files and Vite imports them, instead of embedding them into a hand-written `index.html`. The single-file output still meets the one-offline-file rule.
+4. **The Lab's header band is neutral ink, not Cobalt.** The design-tool layer asks for a Cobalt band; plan D12 chose the neutral band for the whole app, so the Lab and the talk look like one tool.
+5. **Process note, not a rule exception.** The source stays Vite + TypeScript. The skill's script prepares the design-system files and Vite imports them, instead of embedding them into a hand-written `index.html`. The single-file output still meets the one-offline-file rule.
 
 ## Licenses
 
