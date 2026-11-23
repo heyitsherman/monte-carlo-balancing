@@ -26,6 +26,7 @@ Turn "Run it 10,000 times" from a fixed 5-minute talk into a modular kit for tea
 | D10 | Build in phase order | Herman's preference. Phases 0 and 3 already improve the existing talk. |
 | D11 | Phase 4 targets: push your luck has a clear dominant strategy; loot drops target the average; best-of-N uses a 55% edge and a ≥ 75% series win | Clarity makes the lesson understandable and sticky (details in Phase 4) |
 | D12 | Remove auto-resume; the header uses neutral ink, with Cobalt as an accent; the worksheet is an editable doc | Agreed 23 Nov 2026 |
+| D13 | The race's fairness band is 50% ± 3, and "Not enough data" comes with an on-screen prompt and a one-key fix | Agreed 24 Nov 2026; details under "Decided after the plan was agreed" |
 
 ## Design-system exceptions (to list in the README)
 
@@ -92,7 +93,7 @@ Turn "Run it 10,000 times" from a fixed 5-minute talk into a modular kit for tea
 |---|---|
 | 3.1 | **Predict-first beats**: Dice Duel step 1 ("Which outcome is most likely?") and before the race verdict ("What % does P1 win?") |
 | 3.2 | **New chapter "Ten playtests prove nothing"**: 20 groups each play 10 games of the 61.8% race, shown as a grid of small results; count how many groups would have called it fair or P2-favoured. Self-contained, so it fits any playlist. |
-| 3.3 | **Race verdicts use target bands** (Phase 1.3). Add a caption beat on the coin flip: "fair across games, not within a game". |
+| 3.3 | **Race verdicts use target bands** (Phase 1.3) with the fairness band at 50% ± 3 (D13), plus the "Not enough data" prompt and its N key (see "Decided after the plan was agreed"). Add a caption beat on the coin flip: "fair across games, not within a game". |
 | 3.4 | **Catch-up "feel" metrics**: lead changes per game, comeback rate (the winner was behind at the halfway turn), and share of games decided early. Extend `RaceOutcome`. Labelled simulation-only. |
 | 3.5 | **Closing takeaways** gain "Balanced means on target" and "Fair isn't always the goal". Each chapter's last step gets its own one-line takeaway, so any playlist ends cleanly. |
 
@@ -137,14 +138,15 @@ Snowball rules, house edge and roguelike win rates are discussion prompts in tha
 
 ---
 
-## Still open
+## Decided after the plan was agreed
 
-1. **Before Phase 3: the race storyline under target bands.** With `FAIR_TARGET` (50% ± 2), head start 2 (exact 48.38%) is fair, but only 0.38 points inside the band. With the default seed it reads "Not enough data: run more" at 10,000 runs (CI 47.10–49.06%), at 100,000 (47.91–48.53%) and even at 200,000 (47.98–48.42%). Steps 3.3 ("push it until the verdict flips") and 3.4 ("no whole number is fair, so change the rule") no longer hold as written. Options:
-   - (a) **± 2, and make the ambiguity the lesson:** "near the edge of your tolerance, even 200,000 runs can't tell you". Honest, but murky on stage.
-   - (b) **± 3:** head start 2 reads "Fair" at 10,000 runs (CI inside 47–53%), and the storyline becomes "head start 2 is fair enough; fixes #2 and #3 are alternatives that feel different". Caveat: after a reseed (`S`) it reads "Not enough data" roughly 1 time in 5, which is honest but needs a line in the facilitator guide.
-   - (c) **Keep the v1 significance verdict for this chapter only.** The script is unchanged, but it keeps the "detectable vs matters" confusion that D5 set out to fix.
-
-   To decide with Herman before Phase 3 starts.
+1. **Race storyline under target bands (D13, 24 Nov 2026): option (b), a fairness band of 50% ± 3.** Under ± 2, head start 2 (exact 48.38%) read "Not enough data" even at 200,000 runs. Under ± 3 it reads "Fair" at 10,000 runs with the default seed, and the storyline becomes "head start 2 is fair enough; fixes #2 and #3 are alternatives that feel different". How often head start 2 reads "Not enough data" (from the exact odds): 21% of seeds at 10,000 runs, 2.6% at 20,000, effectively never at 100,000. Head start 1 does so 0.4% of the time at 10,000 runs; the other race configurations never. `FAIR_TARGET` changes to ± 3 in Phase 3.
+2. **"Not enough data" prompt (Phase 3, shared by the talk and the Lab).** Written for the room, because the projector shows everything:
+   - The verdict stays "Not enough data: run more". Under it, one sentence with the real numbers: "Too close to call. The likely range, 47.1–49.1%, crosses the edge of "fair" at 47%. More games shrink the range." The crossed band edge is highlighted on the chart where the range bar crosses it.
+   - One action, as a button and a key: **Run 100,000 games (N)**. It is an explicit run, so it follows D8: the chart adds games from 10,000 to 100,000 (label "Adding games: 50,000 of 100,000") and the range visibly shrinks until it clears the edge.
+   - When it resolves, the prompt becomes one line: "Fair. 100,000 games: 48.1–48.7%, inside 47–53%. It took 10× more games because the answer sits near the edge."
+   - If it is still unclear at 100,000 (possible only in the Lab), the button goes and the prompt reads: "Still too close to call. The true value is right at the edge of your "fair" range, so players won't feel a difference either way. Widen the range, or nudge the rule."
+   - Its space is reserved (no layout shift). Facilitator guide line: "If you see 'Not enough data', press N and narrate the shrinking range."
 
 Exact numbers in Phase 4 are to be reconfirmed by the chapter tests when each game is built.
 
