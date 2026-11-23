@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:single": "tsc --noEmit && vite build --mode single && node scripts/offline.mjs",
     "preview": "vite preview",
     "test": "vitest run",
     "calibrate": "vite-node scripts/calibrate.ts",
@@ -17,6 +18,7 @@
     "typescript": "^5.6.3",
     "vite": "^6.0.7",
     "vite-node": "^3.2.4",
+    "vite-plugin-singlefile": "^2.3.4",
     "vitest": "^3.2.7"
   }
 }

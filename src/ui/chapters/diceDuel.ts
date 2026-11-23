@@ -20,6 +20,9 @@ import { sound } from '../audio';
 import { playBuildUp } from '../buildUp';
 import { el, fx, sleep } from '../util';
 
+const ARROW = '<span class="arrow" aria-hidden="true"></span>';
+const ARROW_BACK = '<span class="arrow arrow--back" aria-hidden="true"></span>';
+
 const CONFIG = diceDuel.defaultConfig;
 const TRACE_N = 100_000;
 const NOUN = { one: 'battle', many: 'battles' };
@@ -36,6 +39,8 @@ const COLORS: Record<DuelOutcome, string> = {
   split: 'var(--neutral)',
   defenderWinsBoth: 'var(--p2)',
 };
+/** Longest sub-line the run steps can show, so the presenter can reserve its height. */
+const MARGIN_SUB_LONGEST = 'Whiskers = 95% confidence interval: up to ± 88.8 pp at n = 10,000.';
 
 export class DiceDuelChapter implements Chapter {
   id = 'duel';
@@ -44,10 +49,10 @@ export class DiceDuelChapter implements Chapter {
   showsStats = true;
   steps = [
     { caption: 'Attacker rolls 3 dice, defender rolls 2. Who wins?', sub: 'Sort both. Highest vs highest, second vs second. Ties go to the defender.' },
-    { caption: '10 battles.' },
-    { caption: '100.' },
-    { caption: '1,000.' },
-    { caption: '10,000.' },
+    { caption: '10 battles.', subVariants: [MARGIN_SUB_LONGEST] },
+    { caption: '100.', subVariants: [MARGIN_SUB_LONGEST] },
+    { caption: '1,000.', subVariants: [MARGIN_SUB_LONGEST] },
+    { caption: '10,000.', subVariants: [MARGIN_SUB_LONGEST] },
     {
       caption: 'Now the exact math.',
       sub: 'Dashed lines: exact odds from all 6⁵ = 7,776 possible rolls. Zoom in: do they fall inside the whiskers?',
@@ -179,21 +184,25 @@ export class DiceDuelChapter implements Chapter {
           ? `<span class="cmp unused">not compared</span>`
           : reveal
             ? `<span class="cmp ${attWon ? 'att' : 'def'}">${
-                attWon ? `◀ ${a} beats ${d}` : a === d ? `tie → defender ▶` : `${d} beats ${a} ▶`
+                attWon
+                  ? `${ARROW_BACK}${a} beats ${d}`
+                  : a === d
+                    ? `tie, defender wins${ARROW}`
+                    : `${d} beats ${a}${ARROW}`
               }</span>`
             : `<span class="cmp">…</span>`;
         return `<div class="bt-row ${compared ? '' : 'dim'}">
-          <div class="bt-die">${dieSvg(a, size, 'var(--p1)', rolling ? 'rolling' : '')}</div>
+          <div class="bt-die">${dieSvg(a, size, 'p1', rolling ? 'rolling' : '')}</div>
           ${verdictHtml}
-          <div class="bt-die">${compared ? dieSvg(d, size, 'var(--p2)', rolling ? 'rolling' : '') : ''}</div>
+          <div class="bt-die">${compared ? dieSvg(d, size, 'p2', rolling ? 'rolling' : '') : ''}</div>
         </div>`;
       })
       .join('');
     const outcome = reveal
-      ? `<div class="bt-outcome" style="color:${COLORS[b.outcome]}">${LABELS[b.outcome]}</div>`
-      : `<div class="bt-outcome">&nbsp;</div>`;
+      ? `<div class="bt-outcome"><span class="outcome outcome--${b.outcome}">${LABELS[b.outcome]}</span></div>`
+      : `<div class="bt-outcome"><span class="outcome outcome--pending">&nbsp;</span></div>`;
     return `<div class="battle">
-      <div class="bt-head"><span style="color:var(--p1)">Attacker · 3 dice</span><span></span><span style="color:var(--p2)">Defender · 2 dice</span></div>
+      <div class="bt-head"><span class="who who--p1">Attacker · 3 dice</span><span></span><span class="who who--p2">Defender · 2 dice</span></div>
       ${rows}
     </div>${outcome}<div class="hint">Press R to roll another battle.</div>`;
   }

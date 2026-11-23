@@ -65,7 +65,7 @@ export function renderBarChart(d: BarChartData, w: number, h: number): string {
     const hasP = Number.isFinite(b.p);
     if (hasP && barAlpha > 0.01) {
       const top = clampY(b.p);
-      s += `<rect x="${cx - bw / 2}" y="${top}" width="${bw}" height="${Math.max(0, y(d.yMin) - top)}" rx="4" fill="${b.color}" class="bar" opacity="${barAlpha}"/>`;
+      s += `<rect x="${cx - bw / 2}" y="${top}" width="${bw}" height="${Math.max(0, y(d.yMin) - top)}" fill="${b.color}" class="bar" opacity="${barAlpha}"/>`;
     }
     if (d.exactAlpha > 0.01 && Number.isFinite(b.exact)) {
       const ey = y(b.exact);
@@ -99,8 +99,8 @@ export function renderBarChart(d: BarChartData, w: number, h: number): string {
         d.exactAlpha > 0.01 && Number.isFinite(b.exact)
           ? `<div class="ro-exact" style="opacity:${d.exactAlpha}">exact ${fx(b.exact * 100, 2)}%</div>`
           : '';
-      return `<div class="ro-col">
-        <div class="ro-big" style="color:${b.color}">${fx(b.p * 100)}%</div>
+      return `<div class="ro-col" style="--line:${b.color}">
+        <div class="ro-big">${fx(b.p * 100)}%</div>
         <div class="ro-small">± ${fx(((b.hi - b.lo) / 2) * 100)} pp (n = ${formatInt(d.n)})</div>
         ${exact}
       </div>`;

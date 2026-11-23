@@ -19,19 +19,31 @@ export function text(x: number, y: number, s: string, cls: string, anchor = 'mid
   return `<text x="${n2(x)}" y="${n2(y)}" text-anchor="${anchor}" class="${cls}" ${extra}>${s}</text>`;
 }
 
-/** Vertical CI whisker from y(lo) to y(hi) with caps. */
+/** Vertical CI whisker from y(lo) to y(hi) with caps, on a ground-coloured halo so it reads over any bar. */
 export function vWhisker(x: number, yLo: number, yHi: number, cap: number, cls = 'whisker'): string {
-  return (
-    line(x, yLo, x, yHi, cls) +
-    line(x - cap, yLo, x + cap, yLo, cls) +
-    line(x - cap, yHi, x + cap, yHi, cls)
-  );
+  const parts = (c: string) =>
+    line(x, yLo, x, yHi, c) + line(x - cap, yLo, x + cap, yLo, c) + line(x - cap, yHi, x + cap, yHi, c);
+  return parts(`${cls} halo`) + parts(cls);
+}
+
+/** Horizontal CI whisker from x(lo) to x(hi) with caps, on a halo. */
+export function hWhisker(xLo: number, xHi: number, y: number, cap: number, cls = 'whisker'): string {
+  const parts = (c: string) =>
+    line(xLo, y, xHi, y, c) + line(xLo, y - cap, xLo, y + cap, c) + line(xHi, y - cap, xHi, y + cap, c);
+  return parts(`${cls} halo`) + parts(cls);
 }
 
 export function svgOpen(w: number, h: number, label: string): string {
   return `<svg class="chart" width="${n2(w)}" height="${n2(h)}" viewBox="0 0 ${n2(w)} ${n2(h)}" role="img" aria-label="${label}" style="--fs:${fontScale().toFixed(3)}">`;
 }
 
-/** Font scale from the viewport: full size from 1200 px wide (projectors, laptops); shrinks on phones, never below 0.7. */
-export const fontScale = () =>
-  Math.max(0.7, Math.min(1, (typeof innerWidth === 'number' ? innerWidth : 1920) / 1200));
+/**
+ * Chart type scale. Follows the root font size, which grows with the window in stage mode
+ * (16 px at 1280×720, 24 px at 1920×1080), and shrinks on narrow screens, never below 0.7.
+ */
+export const fontScale = () => {
+  if (typeof document === 'undefined') return 1;
+  const root = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+  const narrow = Math.max(0.7, Math.min(1, innerWidth / 1200));
+  return (root / 16) * narrow;
+};

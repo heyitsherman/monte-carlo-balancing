@@ -4,7 +4,7 @@ A presenter-driven browser demo that explains **Monte Carlo simulation as a game
 
 > Probability tells you what *should* happen. When interactions are too complex to calculate, Monte Carlo simulation tells you what *does* happen — by playing the game thousands of times. Small effects need 10,000+ runs to see. And a simulation only knows what its simulated players know: it complements playtesting, it doesn't replace it.
 
-**Live demo:** https://heyitsherman.github.io/monte-carlo-balancing/
+**Live demo:** https://heyitsherman.github.io/monte-carlo-balancing/ · **Offline copy:** [offline.html](https://heyitsherman.github.io/monte-carlo-balancing/offline.html), one file that runs from a USB stick with no network (also linked from the `Esc` help).
 
 **Roadmap:** [docs/PLAN.md](docs/PLAN.md) — turning the talk into a modular teaching kit.
 
@@ -28,7 +28,7 @@ Open the page full-screen (F11) on the projector. Everything is keyboard-driven;
 | `T` | Toggle light / dark theme |
 | `Esc` | Help overlay with these keys (any key or click closes it) |
 
-Mouse/touch: buttons in the footer (◀ ▶ R F O ♪ ?), plus the slider and toggles in the race chapter.
+Mouse/touch: the buttons in the header band, top right (previous, next, re-run, Fast mode, overview, sound, theme, keys), plus the slider and switches in the race chapter. Hover a button to see its key.
 
 **Sound** is on by default: dice, a blip when a run starts, a tick per batch, and a chime when a result lands. Browsers only allow audio after the first key press or click, so the opening slide is silent. `M` mutes; the choice is remembered per device, so a room of student laptops can be muted once.
 
@@ -38,7 +38,7 @@ Mouse/touch: buttons in the footer (◀ ▶ R F O ♪ ?), plus the slider and to
 
 ### Run of show (≈ 5 min)
 
-Numbers are screen.step as used by deep links and the footer.
+Numbers are chapter.step, as used by deep links and shown in the header band.
 
 | # | Caption | What happens |
 | --- | --- | --- |
@@ -94,6 +94,7 @@ npm install
 npm run dev        # http://localhost:5173/monte-carlo-balancing/
 npm test           # Vitest: RNG, stats, exact-vs-simulation, calibration band, maxTurns
 npm run build      # type-check + production build into dist/
+npm run build:single  # one self-contained file, dist/offline.html (run after build)
 npm run preview    # serve dist/ under the Pages subpath
 npm run calibrate  # print the calibration table and the README numbers
 npm run bench      # speed check against time budgets (kept out of CI: timing is flaky on shared runners)
@@ -101,7 +102,7 @@ npm run bench      # speed check against time budgets (kept out of CI: timing is
 
 ### Deploy
 
-`.github/workflows/deploy.yml` builds, tests and deploys to GitHub Pages on every push to `main`. In the repo settings, set **Pages → Source** to **GitHub Actions**. The Vite `base` is `/monte-carlo-balancing/`, so the repository must be named `monte-carlo-balancing` (or change `base` in `vite.config.ts`).
+`.github/workflows/deploy.yml` builds, tests and deploys to GitHub Pages on every push to `main`, with `offline.html` published beside the site. In the repo settings, set **Pages → Source** to **GitHub Actions**. The Vite `base` is `/monte-carlo-balancing/`, so the repository must be named `monte-carlo-balancing` (or change `base` in `vite.config.ts`).
 
 ## Architecture
 
@@ -121,8 +122,14 @@ src/
     diceDuel.ts   Risk-style battle + exact enumeration
     race.ts       first-player race + exact DP (without catch-up)
     registry.ts   gameId → Game
+  hih/            design-system files generated from the heyitsherman-web skill (never edit; see Design system)
+  fonts/          the four OFL fonts (Fontsource WOFF2) and their licences
+  fonts.css       @font-face rules for them
+  styles.css      app styles on the design-system tokens
   ui/
-    presenter.ts  chapter/step state machine, keyboard, caption, footer, help, overview
+    presenter.ts  chapter/step state machine, keyboard, header band, caption, footer, help, overview
+    icons.ts      the mark and the header-band icons
+    layout.ts     layout stability: reserved heights and the ?layout-check observer
     playlist.ts   ?set= sessions and #id.step deep links (pure, unit-tested)
     buildUp.ts    the one animation rule: paced 1 → 10 → … → N replays, labelled as replays
     audio.ts      synthesised sounds (Web Audio, no files) and the remembered mute setting
@@ -168,18 +175,37 @@ returns a row-major grid with `.at(i, j)`. A heatmap chapter needs only a new ch
 - **"± x pp"** is the half-width of the Wilson interval, which is slightly asymmetric; the whiskers and bands draw the true asymmetric bounds. Mean game length gets a normal-approximation 95% CI, so it also shows ± and n.
 - **Dice Duel runs from one 100,000-battle stream.** Steps 10 / 100 / 1,000 / 10,000 show cumulative snapshots of the same stream, so the bars at 10,000 are the first 10,000 battles of the convergence chart.
 - **Show vs Fast.** The mode is global (default Show, toggled with `F`) and applies to step entry and `R`. Slider/toggle changes in the race chapter always run Fast. Going backwards always renders instantly. Show-mode pacing happens on the main thread over checkpoint snapshots from the worker, so the worker never sleeps.
-- **One animation rule** (plan D8). Entering a run step or pressing `R` plays the paced build-up; moving a slider or toggle updates straight away. Build-ups replay results that are already computed, and the label bottom-right says so ("Replaying the first 100 games"), so the pacing isn't mistaken for the computer being slow.
+- **One animation rule** (plan D8). Entering a run step or pressing `R` plays the paced build-up; moving a slider or toggle updates straight away. Build-ups replay results that are already computed, and the label in the footer says so ("Replaying the first 100 games"), so the pacing isn't mistaken for the computer being slow.
 - **Target bands.** `assess(proportion, target)` compares the CI with a design band: *on target* if the whole CI is inside, a named direction if it is wholly outside, *not enough data* if it crosses an edge. The talk still shows the v1 verdict (a band of width zero, i.e. "does the CI contain 50%?") until the chapters move over in plan Phase 3.
 - **Step 2.6 zooms in.** On a 0–100% axis the ±0.9 pp whiskers and the exact lines merge into one smudge. The axis zooms to the data instead, and the bars fade into dots on the way, because bars cut off at a non-zero baseline would exaggerate the differences.
 - **Single illustrative games** (the one battle in 2.1, the one race in 3.1) are simulated on the main thread: one game takes microseconds. All bulk simulation and `exact()` calls run in the worker.
-- **Keys `1`–`9` map to the session's chapters in order** (in the default talk: Title, Dice Duel, Race, Closing). The footer numbers chapters the same way (`2/4 Dice Duel`), so the keys and the footer always agree. Numeric deep links count within the session too; id links (`#race.4`) work in any session that includes the chapter. Added extras: `PgUp`/`PgDn` (clickers), `↑`/`↓` as aliases for `+`/`−`, `T` for theme, and deep links.
+- **Keys `1`–`9` map to the session's chapters in order** (in the default talk: Title, Dice Duel, Race, Closing). The header band numbers chapters the same way (`2 Dice Duel, Step 3 of 7`), so the keys and the band always agree. Numeric deep links count within the session too; id links (`#race.4`) work in any session that includes the chapter. Added extras: `PgUp`/`PgDn` (clickers), `↑`/`↓` as aliases for `+`/`−`, `T` for theme, and deep links.
 - **Reseed** cancels in-flight work by terminating and recreating the worker.
 - **"Games simulated"** in the footer is the session total, a nice live counter for the audience.
-- **Phones:** below 760 px wide the layout scrolls and readouts shrink below the projector minimums (readable, not polished: the projector is the primary screen).
-- **Fonts:** system font stack (Segoe UI on Windows), so there is no network dependency at all.
+- **Layouts.** Stage mode (1000 px wide or more, 600 px tall, landscape) fits one screen and scales all type with the window: 16 px at 1280×720, 24 px at 1920×1080, 15 px on a 1024×768 projector. Below 1000 px the page becomes one scrolling column (tablets); below 761 px type and controls shrink further (phones). The design system's stage threshold is 1180 px; it starts at 1000 px here so a 4:3 projector still gets the fit-to-screen layout.
+- **The offline copy** is the same app built with `vite-plugin-singlefile`: scripts, styles, fonts and the simulation worker are inlined, and the favicon is a data URL. The worker is a classic (IIFE) script because Chrome refuses module workers from blob URLs on pages opened from disk. `scripts/offline.mjs` fails the build if the file references anything outside itself.
 - **Tooling:** Vite 6, TypeScript 5 (strict), Vitest 3.
+
+## Design system
+
+Built on Herman's heyitsherman system: **heyitsherman-web v1.1** with the **heyitsherman-web-game** layer (design-tool mode).
+
+- `src/hih/tokens.css` and `src/hih/hih-web.css` are generated by the game skill's `prepare_design_system.py` from the heyitsherman-web skill. Never edit them; regenerate them when the system changes.
+- **Colours.** Paper and Night follow the OS (or `T`, remembered per device). P1 is Cobalt and P2 Mustard (a colourblind-safe pair); Teal means "on target" (the Fair verdict, the fair line, the winning lane). Line colours fill bars, dice, tokens and strips; text is always ink or muted, and text on a fill uses that colour's own on-colour, so every pair passes AA in both themes. Orange appears only in the mark and favicon. No red and no green.
+- **Header band** in neutral ink (the footer band's colour) with the mark; Cobalt appears only as the progress strip, so the band doesn't read as Player 1.
+- **Type.** Jost for display headings (Title Case via CSS), Atkinson Hyperlegible Next for captions, labels and body, Zilla Slab for the big numbers, Fira Sans Condensed for data (ticks, margins, the seed). Captions are sentences, so they are Atkinson in sentence case rather than Title Case headings.
+- **Shapes.** Square corners everywhere except the dice and race tokens (game pieces keep their real shapes).
+- **Layout stability.** Nothing changes size while a step plays. The sub-line reserves the height of every text its step can show, and the replay label keeps its space when hidden. Check with `?layout-check`: present the whole talk (including re-runs and slider changes), then run `mcb.layoutChanges()` in the console. It must return `[]`.
+
+### Design system exceptions
+
+1. **Simulating problems with exact answers.** The design-tool rule says to compute exactly where possible. Here, agreement between simulation and the math *is* the lesson.
+2. **Animated build-ups and counters on explicit runs.** The design-tool motion rule says to update in place. The build-up is the teaching device: it is feedback to a presenter action, it follows one rule in every mode, it is labelled as a replay, and it is off under reduced motion.
+3. **No How-to-play guide on load.** It would pop up in front of a class. `Esc` opens the keys.
+4. **Process note, not a rule exception.** The source stays Vite + TypeScript. The skill's script prepares the design-system files and Vite imports them, instead of embedding them into a hand-written `index.html`. The single-file output still meets the one-offline-file rule.
 
 ## Licenses
 
 - **Code:** MIT. See [LICENSE](LICENSE).
 - **Explanatory text** (captions, README prose, on-screen copy): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Fonts:** Jost (Indestructible Type), Atkinson Hyperlegible Next (Braille Institute), Zilla Slab (Mozilla) and Fira Sans Condensed (Mozilla / Telefonica), all under the [SIL Open Font License 1.1](https://openfontlicense.org). Unmodified Fontsource 5.3.0 Latin WOFF2 files; licences in `src/fonts/`.

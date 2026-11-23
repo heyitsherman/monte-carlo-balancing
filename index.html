@@ -6,7 +6,17 @@
     <meta name="description" content="Run it 10,000 times — a presenter-driven demo of Monte Carlo simulation as a game-balancing tool." />
     <meta name="color-scheme" content="light dark" />
     <title>Run it 10,000 times</title>
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <!-- The mark as an inline favicon, so the one-file offline copy needs nothing beside it. -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22300 -300 1600 1600%22%3E%3Cstyle%3E.i%7Bfill:%23141312%7D%40media (prefers-color-scheme:dark)%7B.i%7Bfill:%23F3F4F4%7D%7D%3C/style%3E%3Cpath class=%22i%22 d=%22M690-300H300v1600h230v-200c0-220,160-220,160-440V-300z%22/%3E%3Cpath class=%22i%22 d=%22M1120-300H810v960c0,220-160,220-160,440v200h310V720c0-220,160-220,160-440V-300z%22/%3E%3Cpath fill=%22%23FF4F00%22 d=%22M1550-300h-310v580c0,220-160,220-160,440v580h310V340c0-220,160-220,160-440V-300z%22/%3E%3Cpath class=%22i%22 d=%22M1900-300h-230v200c0,220-160,220-160,440v960h390V-300z%22/%3E%3C/svg%3E" />
+    <script>
+      /* Theme before paint: the stored override (T key), else the OS. */
+      (function () {
+        try {
+          var t = localStorage.getItem('hih-theme');
+          if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

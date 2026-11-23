@@ -58,8 +58,8 @@ export function renderConvergence(d: ConvergenceData, w: number, h: number): str
   s += `</svg>`;
 
   const ro = last
-    ? `<div class="conv-readout"><span class="ro-label">${d.label}</span>
-        <span class="ro-big" style="color:${d.color}">${fx(last.p * 100)}%</span>
+    ? `<div class="conv-readout" style="--line:${d.color}"><span class="ro-label">${d.label}</span>
+        <span class="ro-big">${fx(last.p * 100)}%</span>
         <span class="ro-small">± ${fx(((last.hi - last.lo) / 2) * 100, last.n >= 10000 ? 2 : 1)} pp (n = ${formatInt(last.n)})</span></div>`
     : '';
   return ro + s;

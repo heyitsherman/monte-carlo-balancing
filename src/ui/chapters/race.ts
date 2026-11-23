@@ -41,7 +41,13 @@ export class RaceChapter implements Chapter {
     { caption: 'A simple race. Roll and move. First to the end wins.', sub: `${BASE.trackLength} squares, one d6, Player 1 always moves first.` },
     { caption: 'Is it fair? Play it 10,000 times.' },
     { caption: 'Fix #1: give Player 2 a head start.', sub: 'Press + / − to change the head start. Push it until the verdict flips.' },
-    { caption: 'Too far. Balancing is overcorrection, then correction.' },
+    {
+      caption: 'Too far. Balancing is overcorrection, then correction.',
+      subVariants: [
+        'Sometimes no whole number is fair — so change the rule, not the number.',
+        'Head start 6 is fair within margin.',
+      ],
+    },
     { caption: 'Fix #2: Player 2 gets +1 on their first roll.', sub: 'Mathematically identical to a 1-square head start. Different rule, same numbers.' },
     { caption: 'Fix #3: whoever is behind rolls 2 dice, keeps the best.', sub: 'Fairer — but it changes how the game feels.' },
   ];
@@ -241,18 +247,18 @@ export class RaceChapter implements Chapter {
     const cells = (p: 1 | 2) =>
       Array.from({ length: L + 1 }, (_, i) => {
         const cls = i === 0 ? 'cell start' : i === L ? 'cell finish' : 'cell';
-        const label = i === 0 ? 'Start' : i === L ? '🏁' : String(i);
+        const label = i === 0 ? 'Start' : i === L ? 'Finish' : String(i);
         return `<div class="${cls}">${label}</div>`;
       }).join('') + `<div class="token p${p}" data-p="${p}">P${p}</div>`;
     this.trackView.innerHTML = `
       <div class="track" style="--cells:${L + 1}">
-        <div class="lane" data-lane="1"><div class="lane-label p1">P1</div><div class="squares">${cells(1)}</div></div>
-        <div class="lane" data-lane="2"><div class="lane-label p2">P2</div><div class="squares">${cells(2)}</div></div>
+        <div class="race-lane" data-lane="1"><div class="lane-label who who--p1">P1</div><div class="squares">${cells(1)}</div></div>
+        <div class="race-lane" data-lane="2"><div class="lane-label who who--p2">P2</div><div class="squares">${cells(2)}</div></div>
       </div>
       <div class="turn-info"><div class="turn-dice"></div><div class="turn-text">Player 1 moves first.</div></div>
       <div class="hint">Press R to play another game.</div>`;
     const tokens = [1, 2].map((p) => this.trackView.querySelector<HTMLElement>(`.token.p${p}`)!);
-    const lanes = [1, 2].map((p) => this.trackView.querySelector<HTMLElement>(`.lane[data-lane="${p}"]`)!);
+    const lanes = [1, 2].map((p) => this.trackView.querySelector<HTMLElement>(`.race-lane[data-lane="${p}"]`)!);
     const diceEl = this.trackView.querySelector<HTMLElement>('.turn-dice')!;
     const textEl = this.trackView.querySelector<HTMLElement>('.turn-text')!;
     const place = (p: number, pos: number) => {
@@ -264,10 +270,10 @@ export class RaceChapter implements Chapter {
     if (!(await this.ctx.wait(animate ? 600 : 150, epoch))) return;
     for (const ev of events) {
       lanes.forEach((l, i) => l.classList.toggle('active', i + 1 === ev.player));
-      const color = ev.player === 1 ? 'var(--p1)' : 'var(--p2)';
-      diceEl.innerHTML = ev.rolls.map((r) => dieSvg(r, 64, color)).join('');
+      const tone = ev.player === 1 ? 'p1' : 'p2';
+      diceEl.innerHTML = ev.rolls.map((r) => dieSvg(r, 64, tone)).join('');
       const pos = ev.positions[ev.player - 1];
-      textEl.innerHTML = `<b class="p${ev.player}">P${ev.player}</b> rolls ${ev.rolls.join(' & ')} → ${
+      textEl.innerHTML = `<b class="who who--p${ev.player}">P${ev.player}</b> rolls ${ev.rolls.join(' & ')}, moves to ${
         pos >= L ? 'the finish!' : `square ${pos}`
       }`;
       place(ev.player, pos);
@@ -276,7 +282,7 @@ export class RaceChapter implements Chapter {
     }
     lanes.forEach((l) => l.classList.remove('active'));
     lanes[outcome.winner - 1].classList.add('winner');
-    textEl.innerHTML = `<b class="p${outcome.winner}">Player ${outcome.winner} wins</b> after ${outcome.turns} turns.`;
+    textEl.innerHTML = `<b class="who who--p${outcome.winner}">Player ${outcome.winner} wins</b> after ${outcome.turns} turns.`;
     if (audible) sound.verdict();
   }
 
@@ -345,9 +351,9 @@ export class RaceChapter implements Chapter {
       ? `<span class="exact-inline">math: ${fx(exact.p1Win * 100, 2)}%</span>`
       : `<span class="exact-inline">no closed form — simulation only</span>`;
     this.readout.innerHTML = `
-      <div class="rr-row"><span class="rr-name p1">P1 wins</span><span class="rr-big p1">${fx(p1.p * 100)}%</span><span class="rr-ci">± ${fx(p1.marginPP)} pp</span></div>
-      <div class="rr-row"><span class="rr-name p2">P2 wins</span><span class="rr-big p2">${p2Shown}%</span><span class="rr-ci">± ${fx(p2.marginPP)} pp</span></div>
-      <div class="rr-meta">n = ${formatInt(agg.n)} games · ${exactTxt}${agg.capHits ? ` · ⚠ ${agg.capHits} capped` : ''}</div>
+      <div class="rr-row"><span class="rr-name"><span class="swatch swatch--p1"></span>P1 wins</span><span class="rr-big">${fx(p1.p * 100)}%</span><span class="rr-ci">± ${fx(p1.marginPP)} pp</span></div>
+      <div class="rr-row"><span class="rr-name"><span class="swatch swatch--p2"></span>P2 wins</span><span class="rr-big">${p2Shown}%</span><span class="rr-ci">± ${fx(p2.marginPP)} pp</span></div>
+      <div class="rr-meta">n = ${formatInt(agg.n)} games · ${exactTxt}${agg.capHits ? ` · ${agg.capHits} games hit the turn cap` : ''}</div>
       <div class="verdict ${verdictClass(v)}">${v}</div>`;
     const ghost = baseline && this.step !== 1 ? wilson(baseline.p1Wins, baseline.n).p : NaN;
     void this.tug.set({ p: p1.p, lo: p1.lo, hi: p1.hi, exact: exact ? exact.p1Win : NaN, ghost }, ms);

@@ -22,10 +22,28 @@ export interface SweepChartData {
 
 const verdictColor = (v: string) => (v === 'Favors P1' ? 'var(--p1)' : v === 'Favors P2' ? 'var(--p2)' : 'var(--fair)');
 
+/** The dot colours, named in text (colour never carries meaning alone). */
+function legend(x: number, y: number, fs: number): string {
+  const items: [string, string][] = [
+    ['Favors P1', 'var(--p1)'],
+    ['Fair within margin', 'var(--fair)'],
+    ['Favors P2', 'var(--p2)'],
+  ];
+  let s = '';
+  let cx = x;
+  for (const [label, color] of items) {
+    s += `<circle cx="${cx + 9 * fs}" cy="${y - 7 * fs}" r="${9 * fs}" fill="${color}"/>`;
+    s += text(cx + 24 * fs, y, label, 'legend', 'start');
+    cx += (label.length * 10.5 + 60) * fs;
+  }
+  return s;
+}
+
 /** 1D sweep: P1 win rate per parameter value with CI whiskers, 50% line, exact markers. */
 export function renderSweep(d: SweepChartData, w: number, h: number): string {
   const fs = fontScale();
-  const m = { l: 90 * fs, r: 40 * fs, t: 30 * fs, b: 90 * fs };
+  // The top margin holds the legend, clear of the highest point's label.
+  const m = { l: 90 * fs, r: 40 * fs, t: 76 * fs, b: 90 * fs };
   const band = (w - m.l - m.r) / d.xs.length;
   const cx = (i: number) => m.l + band * (i + 0.5);
   const y = linear(d.yMin, d.yMax, h - m.b, m.t);
@@ -36,6 +54,7 @@ export function renderSweep(d: SweepChartData, w: number, h: number): string {
     s += line(m.l, y(v), w - m.r, y(v), 'grid');
     s += text(m.l - 12 * fs, y(v) + 7 * fs, `${Math.round(v * 100)}%`, 'tick', 'end');
   }
+  s += legend(m.l, 26 * fs, fs);
   s += line(m.l, y(0.5), w - m.r, y(0.5), 'fair');
   s += text(w - m.r, y(0.5) - 10 * fs, '50% = fair', 'fair-label', 'end');
   d.xs.forEach((v, i) => (s += text(cx(i), h - m.b + 36 * fs, String(v), 'cat-label')));
@@ -55,7 +74,7 @@ export function renderSweep(d: SweepChartData, w: number, h: number): string {
     s += `<circle cx="${cx(i)}" cy="${y(wl.p)}" r="${11 * fs}" fill="${color}" class="dot"/>`;
     // value label then "± margin" underneath; above the point when P1 is favored, below otherwise
     const ly = wl.p >= 0.5 ? y(wl.hi) - 44 * fs : y(wl.lo) + 34 * fs;
-    s += text(cx(i), ly, `${fx(wl.p * 100)}%`, 'pt-label', 'middle', `fill="${color}"`);
+    s += text(cx(i), ly, `${fx(wl.p * 100)}%`, 'pt-label');
     s += text(cx(i), ly + 26 * fs, `± ${fx(wl.marginPP)} pp`, 'pt-sub');
   }
   s += `</svg>`;

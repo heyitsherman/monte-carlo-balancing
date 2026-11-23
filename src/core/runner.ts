@@ -1,4 +1,6 @@
 import type { WorkerRequest, WorkerResponse } from './protocol';
+// Inlined into the bundle as a blob, so the single-file build (offline.html) needs no worker file.
+import SimWorker from './worker?worker&inline';
 
 export interface Progress<A> {
   done: number;
@@ -44,7 +46,7 @@ export class Runner {
 
   private ensureWorker(): Worker {
     if (this.worker) return this.worker;
-    const w = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+    const w = new SimWorker();
     w.onmessage = (e: MessageEvent<WorkerResponse>) => this.handle(e.data);
     w.onerror = (e) => {
       const err = new Error(e.message || 'Worker error');

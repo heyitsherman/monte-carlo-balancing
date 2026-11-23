@@ -4,25 +4,40 @@ import { formatInt } from '../core/stats';
 import { sound } from './audio';
 import { parseHash, parsePlaylist, playlistUrl } from './playlist';
 import type { AppContext, Chapter, EnterInfo, Mode } from './types';
+import { icon, MARK_SVG } from './icons';
+import { LayoutCheck, reserveHeight } from './layout';
 import { el, esc } from './util';
 
 export const DEFAULT_SEED = 'dgt-balance';
 
+const kbd = (k: string) => `<kbd>${k}</kbd>`;
+const ARROW_RIGHT = kbd('<span class="arrow" role="img" aria-label="Right arrow"></span>');
+const ARROW_LEFT = kbd('<span class="arrow arrow--back" role="img" aria-label="Left arrow"></span>');
+
+/** Key rows for the help overlay: [keys as HTML, what they do]. */
 function keyRows(chapterCount: number): [string, string][] {
   return [
-    ['→  Space  PgDn', 'Next step'],
-    ['←  PgUp', 'Previous step'],
-    ['R', 'Re-run current step'],
-    ['F', 'Toggle Show / Fast mode'],
-    ['S', 'Reseed (random)'],
-    ['+  −', 'Adjust the active slider / toggle'],
-    [chapterCount > 1 ? `1 – ${Math.min(9, chapterCount)}` : '1', 'Jump to chapter'],
-    ['O', 'Overview: every chapter and step'],
-    ['M', 'Sound on / off'],
-    ['T', 'Toggle light / dark theme'],
-    ['Esc', 'Show / hide this help'],
+    [`${ARROW_RIGHT} ${kbd('Space')} ${kbd('PgDn')}`, 'Next step'],
+    [`${ARROW_LEFT} ${kbd('PgUp')}`, 'Previous step'],
+    [kbd('R'), 'Re-run the current step'],
+    [kbd('F'), 'Show mode or Fast mode'],
+    [kbd('S'), 'New random seed'],
+    [`${kbd('+')} ${kbd('−')}`, 'Adjust the active slider or switch'],
+    [chapterCount > 1 ? `${kbd('1')} to ${kbd(String(Math.min(9, chapterCount)))}` : kbd('1'), 'Jump to a chapter'],
+    [kbd('O'), 'Overview: every chapter and step'],
+    [kbd('M'), 'Sound on or off'],
+    [kbd('T'), 'Light or dark theme'],
+    [kbd('Esc'), 'Show or hide this help'],
   ];
 }
+
+const THEME_KEY = 'hih-theme';
+
+/** The web build links to its one-file offline copy; the offline copy itself doesn't. */
+const OFFLINE_LINK =
+  import.meta.env.MODE === 'single'
+    ? ''
+    : '<p>No network at the venue? <a href="offline.html" download="run-it-10000-times.html">Download the offline copy</a>: one file that runs from a USB stick.</p>';
 
 export interface PresenterOptions {
   /** Chapter ids shown when the URL has no `?set=` (the 5-minute talk). */
@@ -48,12 +63,15 @@ export class Presenter {
   private subEl: HTMLElement;
   private replayEl: HTMLElement;
   private stages: HTMLElement[] = [];
-  private footerInfo: HTMLElement;
+  private chapterEl: HTMLElement;
+  private metaEl: HTMLElement;
   private footnote: HTMLElement;
   private help: HTMLElement;
   private overview: HTMLElement;
   private soundBtn: HTMLButtonElement;
+  private modeBtn: HTMLButtonElement;
   private progressEl: HTMLElement;
+  private layoutCheck: LayoutCheck | null = null;
   readonly ctx: AppContext;
 
   constructor(
@@ -89,14 +107,46 @@ export class Presenter {
         self.renderSub();
       },
       setReplay: (text) => {
-        // visibility (not display) so the label never shifts the layout
-        self.replayEl.textContent = text ?? '';
+        // visibility (not display), and a no-break space when hidden, so the label never shifts the layout
+        self.replayEl.textContent = text ?? ' ';
         self.replayEl.style.visibility = text ? '' : 'hidden';
       },
     };
 
     root.innerHTML = '';
-    this.captionEl = el('h2', { class: 'caption', 'aria-live': 'polite' });
+
+    // Header band: neutral ink with the mark; Cobalt appears only as the progress strip (D12).
+    const band = el('header', { class: 'band' });
+    const bandInner = el('div', { class: 'band__inner' });
+    const brand = el('div', { class: 'band__brand' });
+    brand.innerHTML = `<span class="mark" aria-hidden="true">${MARK_SVG}</span><span class="band__title">Run it 10,000 times</span>`;
+    this.chapterEl = el('div', { class: 'band__chapter' });
+    const nav = el('nav', { class: 'band__nav', 'aria-label': 'Presenter controls' });
+    const btn = (html: string, title: string, fn: () => void, cls = '') => {
+      const b = el('button', { type: 'button', class: `icon-btn ${cls}`.trim(), title, 'aria-label': title }, html);
+      b.addEventListener('click', () => {
+        fn();
+        b.blur();
+      });
+      return b;
+    };
+    this.modeBtn = btn(icon('fast'), 'Fast mode (F)', () => this.toggleMode());
+    this.soundBtn = btn(icon('sound'), 'Sound (M)', () => sound.toggle(), 'sound-btn');
+    nav.append(
+      btn(icon('prev'), 'Previous step', () => this.prev()),
+      btn(icon('next'), 'Next step', () => this.next()),
+      btn(icon('rerun'), 'Re-run (R)', () => this.rerun()),
+      this.modeBtn,
+      btn(icon('overview'), 'Overview (O)', () => this.toggleOverview()),
+      this.soundBtn,
+      btn(icon('theme'), 'Light or dark theme (T)', () => this.toggleTheme()),
+      btn(icon('help'), 'Keys (Esc)', () => this.toggleHelp()),
+    );
+    bandInner.append(brand, this.chapterEl, nav);
+    this.progressEl = el('div', { class: 'progress', 'aria-hidden': 'true' });
+    band.append(bandInner, this.progressEl);
+
+    this.captionEl = el('h2', { class: 'slide-caption', 'aria-live': 'polite' });
     this.subEl = el('p', { class: 'sub' });
     const stageWrap = el('main', { class: 'stage-wrap' });
     for (const ch of this.chapters) {
@@ -106,43 +156,25 @@ export class Presenter {
       this.stages.push(s);
       ch.mount(s, this.ctx);
     }
+
+    // Footer: the statistics footnote, the replay label and the session meta share one row.
     this.footnote = el('div', { class: 'footnote' }, '± is a 95% confidence interval. Quadruple the runs to halve it.');
-    // The replay label shares the footnote's row (right-aligned): that space is free on every screen.
     this.replayEl = el('div', { class: 'replay', 'aria-live': 'polite' });
     this.replayEl.style.visibility = 'hidden';
-    const footRow = el('div', { class: 'footnote-row' });
-    footRow.append(this.footnote, this.replayEl);
+    this.metaEl = el('div', { class: 'footer-meta' });
     const footer = el('footer', { class: 'footer' });
-    this.progressEl = el('div', { class: 'progress', 'aria-hidden': 'true' });
-    this.footerInfo = el('div', { class: 'footer-info' });
-    const nav = el('div', { class: 'footer-nav' });
-    const btn = (label: string, title: string, fn: () => void) => {
-      const b = el('button', { type: 'button', title, 'aria-label': title }, label);
-      b.addEventListener('click', () => {
-        fn();
-        b.blur();
-      });
-      return b;
-    };
-    this.soundBtn = btn('♪', 'Sound on / off (M)', () => sound.toggle());
-    this.soundBtn.classList.add('sound-btn');
-    nav.append(
-      btn('◀', 'Previous step', () => this.prev()),
-      btn('▶', 'Next step', () => this.next()),
-      btn('R', 'Re-run', () => this.rerun()),
-      btn('F', 'Toggle Show / Fast', () => this.toggleMode()),
-      btn('O', 'Overview', () => this.toggleOverview()),
-      this.soundBtn,
-      btn('?', 'Keys', () => this.toggleHelp()),
-    );
-    footer.append(this.footerInfo, nav);
+    footer.append(this.footnote, this.replayEl, this.metaEl);
 
     this.help = el('div', { class: 'overlay help', role: 'dialog', 'aria-label': 'Keyboard shortcuts' });
-    this.help.innerHTML = `<div class="help-card"><h3>Keys</h3><dl>${keyRows(this.chapters.length)
-      .map(([k, d]) => `<dt>${esc(k)}</dt><dd>${esc(d)}</dd>`)
-      .join('')}</dl><p>Mouse/touch: use the buttons bottom-right. Any key or click closes this.</p></div>`;
+    this.help.innerHTML = `<div class="help-card"><h3>Keys</h3><dl class="keys">${keyRows(this.chapters.length)
+      .map(([k, d]) => `<dt>${k}</dt><dd>${esc(d)}</dd>`)
+      .join('')}</dl>
+      <p>Mouse or touch: the buttons top right. Any key or click closes this.</p>
+      ${OFFLINE_LINK}</div>`;
     this.help.hidden = true;
-    this.help.addEventListener('click', () => this.toggleHelp());
+    this.help.addEventListener('click', (e) => {
+      if (!(e.target as HTMLElement).closest('a')) this.toggleHelp();
+    });
 
     this.overview = el('div', { class: 'overlay overview', role: 'dialog', 'aria-label': 'Overview of chapters and steps' });
     this.overview.hidden = true;
@@ -157,7 +189,21 @@ export class Presenter {
       }
     });
 
-    root.append(this.captionEl, this.subEl, stageWrap, footRow, footer, this.progressEl, this.help, this.overview);
+    root.append(band, this.captionEl, this.subEl, stageWrap, footer, this.help, this.overview);
+
+    // Keep the sub-line's height when a step swaps it mid-run; measure again on resize and once fonts are in.
+    let resizeTimer = 0;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => this.reserveSub(), 150);
+    });
+    void document.fonts?.ready.then(() => {
+      this.reserveSub();
+      if (new URLSearchParams(location.search).has('layout-check')) {
+        this.layoutCheck = new LayoutCheck(root, () => `${this.chapters[this.ci].id}.${this.si + 1}`);
+        (window as unknown as { mcb: unknown }).mcb = { layoutChanges: () => this.layoutCheck!.changes() };
+      }
+    });
 
     runner.onSimulated = () => this.renderFooter();
     sound.onChange = () => this.renderFooter();
@@ -195,17 +241,25 @@ export class Presenter {
     this.stages.forEach((s, i) => (s.hidden = i !== ci));
     const ch = this.chapters[ci];
     const step = ch.steps[si];
+    this.layoutCheck?.navigated();
     this.captionEl.textContent = step.caption;
     this.captionEl.style.visibility = step.caption ? '' : 'hidden';
     this.captionEl.classList.remove('enter');
     void this.captionEl.offsetWidth; // restart the fade-in
     this.captionEl.classList.add('enter');
     this.renderSub();
+    this.reserveSub();
     this.footnote.style.visibility = ch.showsStats ? '' : 'hidden';
     this.root.dataset.chapter = ch.id;
     this.progressEl.style.setProperty('--progress', String(this.progressFraction()));
     this.renderFooter();
     ch.enter(si, info);
+  }
+
+  /** The sub-line takes the height of the tallest text this step can show, so swapping it never moves the stage. */
+  private reserveSub(): void {
+    const step = this.chapters[this.ci].steps[this.si];
+    reserveHeight(this.subEl, [step.sub ?? '', ...(step.subVariants ?? [])]);
   }
 
   private progressFraction(): number {
@@ -249,11 +303,22 @@ export class Presenter {
     this.go(this.ci, this.si, { direction: 'rerun', animate: this.mode === 'show' });
   }
 
+  /** The OS decides; T stores an override, and choosing what the OS already prefers clears it. */
   toggleTheme(): void {
     const html = document.documentElement;
-    const current =
-      html.dataset.theme ?? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    html.dataset.theme = current === 'dark' ? 'light' : 'dark';
+    const osDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const next = (html.dataset.theme ?? (osDark ? 'dark' : 'light')) === 'dark' ? 'light' : 'dark';
+    try {
+      if ((next === 'dark') === osDark) {
+        localStorage.removeItem(THEME_KEY);
+        delete html.dataset.theme;
+      } else {
+        localStorage.setItem(THEME_KEY, next);
+        html.dataset.theme = next;
+      }
+    } catch {
+      html.dataset.theme = next;
+    }
   }
 
   toggleHelp(): void {
@@ -274,16 +339,19 @@ export class Presenter {
 
   private renderFooter(): void {
     const ch = this.chapters[this.ci];
-    const stepTxt = ch.steps.length > 1 ? ` · step ${this.si + 1}/${ch.steps.length}` : '';
-    this.footerInfo.innerHTML = [
-      `<span>${this.ci + 1}/${this.chapters.length} ${esc(ch.title)}${stepTxt}</span>`,
-      `<span class="mode mode-${this.mode}">${this.mode === 'show' ? 'Show mode' : 'Fast mode'}</span>`,
-      `<span>seed <code>${esc(this.seed)}</code></span>`,
+    const stepTxt = ch.steps.length > 1 ? `<span class="band__step">Step ${this.si + 1} of ${ch.steps.length}</span>` : '';
+    this.chapterEl.innerHTML = `<span class="band__no">${this.ci + 1}</span><span class="band__name">${esc(ch.title)}</span>${stepTxt}`;
+    this.metaEl.innerHTML = [
+      `<span class="meta-mode">${this.mode === 'show' ? 'Show mode' : 'Fast mode'}</span>`,
+      `<span>Seed <code>${esc(this.seed)}</code></span>`,
       `<span>${formatInt(this.runner.totalSimulated)} games simulated</span>`,
-    ].join('<span class="sep">·</span>');
-    this.soundBtn.classList.toggle('muted', sound.muted);
+    ].join('');
+    this.modeBtn.setAttribute('aria-pressed', String(this.mode === 'fast'));
+    this.soundBtn.innerHTML = icon(sound.muted ? 'muted' : 'sound');
     this.soundBtn.setAttribute('aria-pressed', String(!sound.muted));
-    this.soundBtn.title = sound.muted ? 'Sound is off (M)' : 'Sound is on (M)';
+    const soundTitle = sound.muted ? 'Sound is off (M)' : 'Sound is on (M)';
+    this.soundBtn.title = soundTitle;
+    this.soundBtn.setAttribute('aria-label', soundTitle);
   }
 
   /** Every chapter of this session with its steps (click to jump), plus session links. */
@@ -299,7 +367,7 @@ export class Presenter {
           })
           .join('');
         return `<section class="ov-chapter">
-          <h4><span class="ov-num">${ci + 1}</span> ${esc(ch.title)} <span class="ov-min">≈ ${ch.minutes} min</span></h4>
+          <h4><span class="ov-num">${ci + 1}</span> ${esc(ch.title)} <span class="ov-min">about ${ch.minutes} min</span></h4>
           <ol>${steps}</ol></section>`;
       })
       .join('');
@@ -308,10 +376,10 @@ export class Presenter {
     const othersHtml = others.length
       ? `<p class="ov-others">Other chapters: ${others
           .map((c) => `<a href="${esc(playlistUrl(base, [c.id]))}">${esc(c.title)}</a>`)
-          .join(' · ')}</p>`
+          .join(', ')}</p>`
       : '';
     this.overview.innerHTML = `<div class="help-card overview-card">
-      <h3>This session · ${this.chapters.length} chapter${this.chapters.length === 1 ? '' : 's'} · ≈ ${minutes} min</h3>
+      <h3>This session: ${this.chapters.length} chapter${this.chapters.length === 1 ? '' : 's'}, about ${minutes} minutes</h3>
       <div class="ov-grid">${cards}</div>
       <p class="ov-link">Session link: <code>${esc(playlistUrl(base, this.chapters.map((c) => c.id)))}</code></p>
       ${othersHtml}

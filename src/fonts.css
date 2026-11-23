@@ -1,0 +1,39 @@
+/* Fonts: Jost (Indestructible Type), Atkinson Hyperlegible Next (Braille Institute), Zilla Slab (Mozilla),
+   Fira Sans Condensed (Mozilla / Telefonica). All SIL Open Font License 1.1 (licences in src/fonts/).
+   Unmodified Fontsource 5.3.0 Latin WOFF2 files. The web build serves them as files; the single-file
+   build (offline.html) inlines them as data URLs. Upright faces only: nothing here uses italics. */
+@font-face {
+  font-family: 'Jost';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/jost-latin-wght-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('./fonts/atkinson-hyperlegible-next-latin-wght-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Zilla Slab';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/zilla-slab-latin-600-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fira Sans Condensed';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/fira-sans-condensed-latin-500-normal.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Fira Sans Condensed';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/fira-sans-condensed-latin-600-normal.woff2') format('woff2');
+}

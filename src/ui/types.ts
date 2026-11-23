@@ -7,6 +7,8 @@ export interface StepDef {
   caption: string;
   /** Optional smaller line under the caption. */
   sub?: string;
+  /** Every other sub-line this step can show (via `setSub`), so its height can be reserved up front. */
+  subVariants?: string[];
 }
 
 export interface AppContext {

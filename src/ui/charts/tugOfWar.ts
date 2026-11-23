@@ -1,4 +1,4 @@
-import { fontScale, line, linear, svgOpen, text } from './svg';
+import { fontScale, hWhisker, line, linear, svgOpen, text } from './svg';
 
 export interface TugData {
   /** P1 win proportion and its 95% CI */
@@ -27,14 +27,10 @@ export function renderTug(d: TugData, w: number, h: number): string {
     const bx = x(d.p);
     s += `<rect x="${x(0)}" y="${barTop}" width="${bx - x(0)}" height="${barH}" fill="var(--p1)" class="tug"/>`;
     s += `<rect x="${bx}" y="${barTop}" width="${x(1) - bx}" height="${barH}" fill="var(--p2)" class="tug"/>`;
-    s += text(x(0) + 20 * fs, barTop + barH / 2 + 12 * fs, 'P1', 'tug-label', 'start');
-    s += text(x(1) - 20 * fs, barTop + barH / 2 + 12 * fs, 'P2', 'tug-label', 'end');
+    s += text(x(0) + 20 * fs, barTop + barH / 2 + 12 * fs, 'P1', 'tug-label tug-label--p1', 'start');
+    s += text(x(1) - 20 * fs, barTop + barH / 2 + 12 * fs, 'P2', 'tug-label tug-label--p2', 'end');
     // CI whisker straddling the boundary
-    const yMid = barTop + barH / 2;
-    const cap = barH * 0.3;
-    s += line(x(d.lo), yMid, x(d.hi), yMid, 'whisker on-bar');
-    s += line(x(d.lo), yMid - cap, x(d.lo), yMid + cap, 'whisker on-bar');
-    s += line(x(d.hi), yMid - cap, x(d.hi), yMid + cap, 'whisker on-bar');
+    s += hWhisker(x(d.lo), x(d.hi), barTop + barH / 2, barH * 0.3);
   } else {
     s += `<rect x="${x(0)}" y="${barTop}" width="${x(1) - x(0)}" height="${barH}" class="tug-empty"/>`;
   }
@@ -49,6 +45,8 @@ export function renderTug(d: TugData, w: number, h: number): string {
     s += text(x(d.ghost), barBot + 50 * fs, 'baseline', 'ghost-label');
   }
   for (const v of [0, 0.25, 0.75, 1]) {
+    // Skip a middle tick that would collide with the "baseline" label.
+    if (v > 0 && v < 1 && Number.isFinite(d.ghost) && Math.abs(x(v) - x(d.ghost)) < 80 * fs) continue;
     s += text(x(v), barBot + 50 * fs, `${v * 100}%`, 'tick', v === 0 ? 'start' : v === 1 ? 'end' : 'middle');
   }
   s += `</svg>`;

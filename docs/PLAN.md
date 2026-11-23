@@ -87,6 +87,13 @@ Turn "Run it 10,000 times" from a fixed 5-minute talk into a modular kit for tea
 
 **Done when:** checked by eye at 375, 768, 1280×720 and 1920×1080 in both themes; AA contrast holds for every colour pair; `offline.html` opens from disk with the network off and makes no requests.
 
+**Notes from execution:**
+- Built on heyitsherman-web v1.1 (recorded in the README). The header band is ink with the mark, the chapter and step, and icon buttons for the controls (they moved up from the footer); the footer now holds the footnote, the replay label and the session meta on one row.
+- Stage mode starts at 1000 px wide (not the skill's 1180) so a 1024×768 projector keeps the fit-to-screen layout; below 1000 px the page is one scrolling column. Listed in the README.
+- Formatting changes to on-screen words: arrow glyphs replaced by drawn arrows (duel comparisons, help keys), "tie → defender" became "tie, defender wins", "rolls 4 → square 7" became "rolls 4, moves to square 7", the flag emoji on the finish square became "Finish", "⚠ n capped" became "n games hit the turn cap", the title hint reads "Press Space to begin, Esc for keys", and the overview heading reads "This session: 4 chapters, about 5 minutes".
+- The simulation worker is now a classic (IIFE) script: Chrome refuses module workers from blob URLs on pages opened from disk (found by running `offline.html` from disk with the network blocked).
+- `?layout-check` found one shift (the footer grew 5 px when the replay label appeared); fixed, and a full pass through the talk with re-runs, slider changes and a reseed now reports none.
+
 ## Phase 3: Sharpen existing chapters
 
 | Item | Change |
