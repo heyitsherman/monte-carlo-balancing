@@ -8,7 +8,9 @@ A presenter-driven browser demo that explains **Monte Carlo simulation as a game
 
 **Lab:** [?lab](https://heyitsherman.github.io/monte-carlo-balancing/?lab), where students change any game's rules and run it themselves, no code.
 
-**Roadmap:** [docs/PLAN.md](docs/PLAN.md) — turning the talk into a modular teaching kit.
+**Teaching kit:** [docs/teaching/](docs/teaching/README.md): a facilitator guide with a segment menu (3 to 90 minutes), an unplugged dice activity, 17 Lab exercises in three tiers with an answer key, and a worksheet template.
+
+**Roadmap:** [docs/PLAN.md](docs/PLAN.md) — how the talk became a modular teaching kit.
 
 ---
 
@@ -254,7 +256,8 @@ src/
                   estimate, wait chart (tries per player), dice; histogram is kept for the Lab
     chapters/     one file per chapter (bookends.ts holds Title and Closing; playtests, luck, loot, bestOf, unfair are the library chapters)
   main.ts
-tests/            Vitest suites (assertions only)
+tests/            Vitest suites (assertions only); teachingKit.test.ts checks every Lab link in docs/teaching
+docs/teaching/    the teaching kit (facilitator guide, dice activity, exercises, answer key, worksheet)
 scripts/          calibrate.ts (README numbers) and benchmark.ts, run with vite-node
 ```
 

@@ -174,6 +174,17 @@ Snowball rules, house edge and roguelike win rates are discussion prompts in tha
 - **Unplugged dice activity**: pool the class's rolls on the board, then compare with the simulation.
 - *Optional, cut first:* a short spreadsheet appendix for the instructor only.
 
+### Notes from execution (Phase 6)
+
+- Six files in `docs/teaching/`: `README.md` (index), `facilitator-guide.md`, `dice-activity.md`, `exercises.md`, `answer-key.md` and `worksheet.md` (the template).
+- **Segment menu:** nine rows from 3 minutes (`?set=race,closing`) to 60–90 minutes, each with its `?set=` link and what students do. Chapter notes cover what to ask, misconceptions, discussion prompts (more on intentional unfairness than the talk's three cards) and which exercises follow.
+- **Exercises:** 17, each a Lab link with its rules set: Explore E1–E6, Tune T1–T6, Design D1–D5. Design exercises have reference tables and "what strong answers look like" instead of one answer.
+- **Answer key numbers** come from the Lab's own code at the default seed (the same values as `npm run calibrate`), and every link was opened in the browser to confirm the screen matches. Checking turned up corrections that are now in the key: only hero HP 34 hits the boss target (35 gives 73.6%, just too easy); the Lab's best-of sweep steps 8 games at a time, so T5 finds the shortest series in Results; and E6 (the first-move edge, 53.25%) ends on "Still too close to call" at 100,000 runs, as D13 specifies.
+- **Dice activity:** one die each, ties to the defender (41.7% attacker). Chosen because it needs only dice, the answer surprises (most predict 50%), and it sets up the Dice Duel and Ten Playtests chapters.
+- **Worksheet:** the editable copy is a doc in Herman's Claude account (D12); `worksheet.md` is its template, so the public repo stays complete.
+- `tests/teachingKit.test.ts` checks every Lab link in the kit decodes and re-encodes unchanged, so a renamed setting can't silently break an exercise.
+- **Cut:** the optional instructor spreadsheet appendix (cut first, as planned).
+
 ---
 
 ## Decided after the plan was agreed
